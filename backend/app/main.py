@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from app.api.health import router as health_router
+from app.api.simulate import router as simulate_router
+from app.api.strategy import router as strategy_router
 
 app = FastAPI(
     title="RaceBrain API",
@@ -8,3 +10,5 @@ app = FastAPI(
 )
 
 app.include_router(health_router)
+app.include_router(simulate_router)
+app.include_router(strategy_router)
