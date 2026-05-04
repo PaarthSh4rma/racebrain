@@ -4,6 +4,7 @@ from typing import Literal
 
 from app.simulation.monte_carlo import compare_monte_carlo_strategies
 from app.simulation.strategy_generator import generate_strategies
+from app.simulation.strategy_engine import compare_strategies
 
 router = APIRouter(prefix="/monte-carlo", tags=["Monte Carlo"])
 
@@ -63,10 +64,19 @@ def monte_carlo_generate_endpoint(request: MonteCarloGenerateRequest):
         include_two_stop=request.include_two_stop,
     )
 
-    strategies = all_strategies[:MAX_STRATEGIES]
+    deterministic_result = compare_strategies(
+        base_lap_time=request.base_lap_time,
+        pit_loss=request.pit_loss,
+        strategies=all_strategies,
+    )
+
+    strategies = [
+        item["strategy"]
+        for item in deterministic_result["ranked_strategies"][:MAX_STRATEGIES]
+    ]
 
     print(f"Generated {len(all_strategies)} strategies")
-    print(f"Evaluating {len(strategies)} strategies")
+    print(f"Evaluating top {len(strategies)} deterministic candidates")
     print(f"Running {simulations} simulations each")
 
     result = compare_monte_carlo_strategies(
@@ -79,8 +89,8 @@ def monte_carlo_generate_endpoint(request: MonteCarloGenerateRequest):
     )
 
     return {
-        "total_generated_before_limit": len(all_strategies),
-        "total_evaluated": len(strategies),
+        "total_generated": len(all_strategies),
+        "deterministic_candidates_evaluated": len(strategies),
         "simulations_per_strategy": simulations,
         **result,
     }
