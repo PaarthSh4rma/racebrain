@@ -82,6 +82,9 @@ def calculate_win_probabilities(
     lap_variance: float = 0.35,
     pit_variance: float = 1.5,
 ) -> dict:
+    import random
+    from statistics import mean, stdev
+
     win_counts = {index + 1: 0 for index in range(len(strategies))}
     total_times_by_strategy = {index + 1: [] for index in range(len(strategies))}
 
@@ -118,11 +121,13 @@ def calculate_win_probabilities(
         strategy_id = index + 1
         total_times = total_times_by_strategy[strategy_id]
 
+        win_prob = win_counts[strategy_id] / simulations
+
         results.append({
             "strategy_id": strategy_id,
             "strategy": strategy,
-            "win_probability": round(win_counts[strategy_id] / simulations, 4),
-            "win_percentage": round((win_counts[strategy_id] / simulations) * 100, 2),
+            "win_probability": round(win_prob, 4),
+            "win_percentage": round(win_prob * 100, 2),
             "average_total_time": round(mean(total_times), 3),
             "best_case": round(min(total_times), 3),
             "worst_case": round(max(total_times), 3),
@@ -135,7 +140,39 @@ def calculate_win_probabilities(
         reverse=True,
     )
 
+    # 🔥 Recommendation logic
+    top_strategy = ranked[0]
+    second_strategy = ranked[1] if len(ranked) > 1 else None
+
+    win_gap = (
+        top_strategy["win_percentage"] - second_strategy["win_percentage"]
+        if second_strategy
+        else top_strategy["win_percentage"]
+    )
+
+    if win_gap >= 10:
+        confidence = "high"
+    elif win_gap >= 5:
+        confidence = "medium"
+    else:
+        confidence = "low"
+
+    strategy_text = " → ".join(
+        f"{stint['compound'].title()} {stint['laps']} laps"
+        for stint in top_strategy["strategy"]
+    )
+
+    recommendation = (
+        f"Strategy {top_strategy['strategy_id']} is preferred: "
+        f"{strategy_text}. "
+        f"It has a {top_strategy['win_percentage']}% win rate. "
+        f"Confidence is {confidence} because the win gap to the next-best strategy is {round(win_gap, 2)}%."
+    )
+
     return {
-        "best_strategy": ranked[0],
+        "best_strategy": top_strategy,
+        "confidence": confidence,
+        "win_gap_to_second": round(win_gap, 2),
+        "recommendation": recommendation,
         "ranked_strategies": ranked,
     }

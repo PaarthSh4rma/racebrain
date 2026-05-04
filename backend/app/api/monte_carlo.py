@@ -13,7 +13,7 @@ router = APIRouter(prefix="/monte-carlo", tags=["Monte Carlo"])
 
 Compound = Literal["soft", "medium", "hard"]
 MAX_STRATEGIES = 10
-MAX_SIMULATIONS = 50
+MAX_SIMULATIONS = 200
 
 class StintRequest(BaseModel):
     compound: Compound
