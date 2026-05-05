@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Literal
 
 from app.simulation.monte_carlo import calculate_win_probabilities
@@ -15,6 +15,14 @@ MAX_SIMULATIONS = 200
 class StintRequest(BaseModel):
     compound: Compound
     laps: int
+
+    @field_validator("laps")
+    def validate_laps(cls, value):
+        if value <= 0:
+            raise ValueError("laps must be greater than 0")
+        if value > 100:
+            raise ValueError("laps too large")
+        return value
 
 
 class MonteCarloCompareRequest(BaseModel):
@@ -36,6 +44,13 @@ class MonteCarloGenerateRequest(BaseModel):
     include_one_stop: bool = True
     include_two_stop: bool = True
 
+    @field_validator("total_laps")
+    def validate_total_laps(cls, value):
+        if value < 10:
+            raise ValueError("total_laps must be at least 10")
+        if value > 100:
+            raise ValueError("total_laps too large")
+        return value
 
 @router.post("/compare")
 def monte_carlo_compare_endpoint(request: MonteCarloCompareRequest):
@@ -45,6 +60,11 @@ def monte_carlo_compare_endpoint(request: MonteCarloCompareRequest):
     ]
 
     simulations = min(request.simulations, MAX_SIMULATIONS)
+
+    for strategy in strategies:
+        total = sum(stint["laps"] for stint in strategy)
+        if total <= 0:
+            raise ValueError("invalid strategy: total laps must be > 0")
 
     result = calculate_win_probabilities(
         strategies=strategies,
