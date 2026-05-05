@@ -145,24 +145,41 @@ export default function App() {
             </button>
 
             <div className="mt-8 grid grid-cols-2 gap-4">
-              <Input
+              <Slider
                 label="Total Laps"
                 value={inputs.total_laps}
+                min={10}
+                max={100}
+                step={1}
                 onChange={(v) => setInputs({ ...inputs, total_laps: v })}
               />
-              <Input
+
+              <Slider
                 label="Base Lap Time"
                 value={inputs.base_lap_time}
+                min={60}
+                max={130}
+                step={0.5}
+                suffix="s"
                 onChange={(v) => setInputs({ ...inputs, base_lap_time: v })}
               />
-              <Input
+
+              <Slider
                 label="Pit Loss"
                 value={inputs.pit_loss}
+                min={15}
+                max={35}
+                step={0.5}
+                suffix="s"
                 onChange={(v) => setInputs({ ...inputs, pit_loss: v })}
               />
-              <Input
+
+              <Slider
                 label="Simulations"
                 value={inputs.simulations}
+                min={50}
+                max={200}
+                step={50}
                 onChange={(v) => setInputs({ ...inputs, simulations: v })}
               />
             </div>
@@ -299,26 +316,54 @@ function Metric({
   );
 }
 
-function Input({
+function Slider({
   label,
   value,
+  min,
+  max,
+  step,
+  suffix = "",
   onChange,
 }: {
   label: string;
   value: number;
+  min: number;
+  max: number;
+  step: number;
+  suffix?: string;
   onChange: (v: number) => void;
 }) {
+  const percentage = ((value - min) / (max - min)) * 100;
+
   return (
     <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-      <p className="text-xs uppercase tracking-[0.2em] text-white/40">
-        {label}
-      </p>
-      <input
-        type="number"
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-2 w-full bg-transparent text-lg font-bold text-white outline-none"
-      />
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-xs uppercase tracking-[0.2em] text-white/40">
+          {label}
+        </p>
+        <p className="rounded-full bg-red-500/10 px-3 py-1 text-sm font-black text-red-300">
+          {value}
+          {suffix}
+        </p>
+      </div>
+
+      <div className="relative">
+        <div className="absolute left-0 top-1/2 h-2 w-full -translate-y-1/2 rounded-full bg-white/10" />
+        <div
+          className="absolute left-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-red-500"
+          style={{ width: `${percentage}%` }}
+        />
+
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="relative z-10 w-full cursor-pointer appearance-none bg-transparent accent-red-500"
+        />
+      </div>
     </div>
   );
 }
