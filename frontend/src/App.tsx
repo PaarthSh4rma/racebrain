@@ -292,6 +292,14 @@ export default function App() {
           </section>
         )}
       </div>
+
+      <footer className="relative mx-auto mt-10 max-w-7xl px-6 pb-8 text-center text-xs leading-6 text-white/35">
+  RaceBrain is an independent fan-made strategy simulation project.
+  It is not affiliated with, endorsed by, or connected to Formula 1,
+  Formula One Management, Liberty Media, the FIA, or any Formula 1 team.
+  Formula 1, F1, and related marks belong to their respective owners. 
+  I love technology, AI and Formula One... and thought of making something that combines them!
+</footer>
     </main>
   );
 }
