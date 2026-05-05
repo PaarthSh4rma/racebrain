@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel, field_validator
 from typing import Literal
-
+from app.data.track_profiles import get_track_profile
 from app.simulation.monte_carlo import calculate_win_probabilities
 from app.simulation.strategy_generator import generate_strategies
 from app.simulation.strategy_engine import compare_strategies
@@ -35,9 +35,8 @@ class MonteCarloCompareRequest(BaseModel):
 
 
 class MonteCarloGenerateRequest(BaseModel):
+    track: str = "monaco"
     total_laps: int = 50
-    base_lap_time: float = 90.0
-    pit_loss: float = 22.0
     simulations: int = 300
     lap_variance: float = 0.35
     pit_variance: float = 1.5
@@ -68,8 +67,8 @@ def monte_carlo_compare_endpoint(request: MonteCarloCompareRequest):
 
     result = calculate_win_probabilities(
         strategies=strategies,
-        base_lap_time=request.base_lap_time,
-        pit_loss=request.pit_loss,
+        base_lap_time=base_lap_time,
+        pit_loss=pit_loss,
         simulations=simulations,
         lap_variance=request.lap_variance,
         pit_variance=request.pit_variance,
@@ -85,7 +84,10 @@ def monte_carlo_compare_endpoint(request: MonteCarloCompareRequest):
 @router.post("/generate")
 def monte_carlo_generate_endpoint(request: MonteCarloGenerateRequest):
     simulations = min(request.simulations, MAX_SIMULATIONS)
+    profile = get_track_profile(request.track)
 
+    base_lap_time = profile["base_lap_time"]
+    pit_loss = profile["pit_loss"]
     all_strategies = generate_strategies(
         total_laps=request.total_laps,
         include_one_stop=request.include_one_stop,
@@ -93,8 +95,8 @@ def monte_carlo_generate_endpoint(request: MonteCarloGenerateRequest):
     )
 
     deterministic_result = compare_strategies(
-        base_lap_time=request.base_lap_time,
-        pit_loss=request.pit_loss,
+        base_lap_time=base_lap_time,
+        pit_loss=pit_loss,
         strategies=all_strategies,
     )
 
@@ -109,14 +111,15 @@ def monte_carlo_generate_endpoint(request: MonteCarloGenerateRequest):
 
     result = calculate_win_probabilities(
         strategies=strategies,
-        base_lap_time=request.base_lap_time,
-        pit_loss=request.pit_loss,
+        base_lap_time=base_lap_time,
+        pit_loss=pit_loss,
         simulations=simulations,
         lap_variance=request.lap_variance,
         pit_variance=request.pit_variance,
     )
 
     return {
+        "track": profile,
         "total_generated": len(all_strategies),
         "deterministic_candidates_evaluated": len(strategies),
         "simulations_per_strategy": simulations,

@@ -65,9 +65,8 @@ export default function App() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        track: "monaco",
         total_laps: inputs.total_laps,
-        base_lap_time: inputs.base_lap_time,
-        pit_loss: inputs.pit_loss,
         simulations: inputs.simulations,
         lap_variance: 0.35,
         pit_variance: 1.5,
