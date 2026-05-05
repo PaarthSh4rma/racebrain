@@ -45,9 +45,12 @@ function formatStrategy(strategy: Strategy["strategy"]) {
     .join(" → ");
 }
 
+
 export default function App() {
   const [result, setResult] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [track, setTrack] = useState("monaco");
+  
 
   const [inputs, setInputs] = useState({
     total_laps: 20,
@@ -55,6 +58,16 @@ export default function App() {
     pit_loss: 22,
     simulations: 200,
   });
+async function loadTrackProfile(trackId: string) {
+  const response = await fetch(`${API_URL}/tracks/${trackId}`);
+  const profile = await response.json();
+
+  setInputs((current) => ({
+    ...current,
+    base_lap_time: profile.base_lap_time,
+    pit_loss: profile.pit_loss,
+  }));
+}
 
   async function runSimulation() {
     setLoading(true);
@@ -64,15 +77,15 @@ export default function App() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        track: "monaco",
-        total_laps: inputs.total_laps,
-        simulations: inputs.simulations,
-        lap_variance: 0.35,
-        pit_variance: 1.5,
-        include_one_stop: true,
-        include_two_stop: false,
-      }),
+        body: JSON.stringify({
+          track,
+          total_laps: inputs.total_laps,
+          simulations: inputs.simulations,
+          lap_variance: 0.35,
+          pit_variance: 1.5,
+          include_one_stop: true,
+          include_two_stop: false,
+        }),
     });
 
     const data = await response.json();
@@ -112,7 +125,7 @@ export default function App() {
           </div>
 
           <div className="rounded-full border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-bold text-red-300">
-            LIVE MODEL
+            {track.toUpperCase()}
           </div>
         </nav>
 
@@ -142,6 +155,34 @@ export default function App() {
             >
               {loading ? "Running simulation..." : "Run Strategy Model"}
             </button>
+
+            <div className="mt-6">
+              <p className="mb-2 text-xs uppercase tracking-[0.2em] text-white/40">
+                Circuit
+              </p>
+
+              <div className="relative">
+                <select
+                  value={track}
+                  onChange={(e) => {
+                    const selectedTrack = e.target.value;
+                    setTrack(selectedTrack);
+                    loadTrackProfile(selectedTrack);
+                  }}
+                  className="w-full appearance-none rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm font-bold uppercase tracking-wider text-white outline-none"
+                >
+                  <option value="monaco">Monaco</option>
+                  <option value="monza">Monza</option>
+                  <option value="silverstone">Silverstone</option>
+                  <option value="spa">Spa</option>
+                  <option value="suzuka">Suzuka</option>
+                </select>
+
+                <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-white/40">
+                  ▼
+                </div>
+              </div>
+            </div>
 
             <div className="mt-8 grid grid-cols-2 gap-4">
               <Slider
