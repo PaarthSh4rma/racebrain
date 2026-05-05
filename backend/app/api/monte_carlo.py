@@ -2,10 +2,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Literal
 
-from app.simulation.monte_carlo import (
-    compare_monte_carlo_strategies,
-    calculate_win_probabilities,
-)
+from app.simulation.monte_carlo import calculate_win_probabilities
 from app.simulation.strategy_generator import generate_strategies
 from app.simulation.strategy_engine import compare_strategies
 
@@ -47,14 +44,22 @@ def monte_carlo_compare_endpoint(request: MonteCarloCompareRequest):
         for strategy in request.strategies
     ]
 
-    return compare_monte_carlo_strategies(
+    simulations = min(request.simulations, MAX_SIMULATIONS)
+
+    result = calculate_win_probabilities(
         strategies=strategies,
         base_lap_time=request.base_lap_time,
         pit_loss=request.pit_loss,
-        simulations=request.simulations,
+        simulations=simulations,
         lap_variance=request.lap_variance,
         pit_variance=request.pit_variance,
     )
+
+    return {
+        "total_evaluated": len(strategies),
+        "simulations_per_strategy": simulations,
+        **result,
+    }
 
 
 @router.post("/generate")
