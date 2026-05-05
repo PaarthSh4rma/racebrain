@@ -77,15 +77,15 @@ http://localhost:5173
 ```
 ---
 ## Future Roadmap
-Circuit-specific race profiles
-Real F1 data ingestion
-Tyre degradation modelling
-Weather-aware simulations
-Safety car and race control events
-ML-based lap time prediction
-AI strategy recommendation agent
-Strategy explanation layer
-'Ferrari Mode' for chaotic pit wall decisions 😂
+- Circuit-specific race profiles
+- Real F1 data ingestion
+- Tyre degradation modelling
+- Weather-aware simulations
+- Safety car and race control events
+- ML-based lap time prediction
+- AI strategy recommendation agent
+- Strategy explanation layer
+- 'Ferrari Mode' for chaotic pit wall decisions 😂
 ---
 ##License
 This project is licensed under the MIT License.
