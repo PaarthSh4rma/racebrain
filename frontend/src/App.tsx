@@ -27,6 +27,10 @@ type Strategy = {
 };
 
 type ApiResponse = {
+  track: string;
+  base_lap_time: number;
+  pit_loss: number;
+  degradation_multiplier: number;
   total_generated: number;
   deterministic_candidates_evaluated: number;
   simulations_per_strategy: number;
@@ -223,6 +227,25 @@ async function loadTrackProfile(trackId: string) {
                 onChange={(v) => setInputs({ ...inputs, simulations: v })}
               />
             </div>
+            {result && (
+              <div className="mt-6 grid grid-cols-3 gap-3">
+                <Metric
+                  icon={<Timer />}
+                  label="Base Lap"
+                  value={`${result.base_lap_time}s`}
+                />
+                <Metric
+                  icon={<Gauge />}
+                  label="Pit Loss"
+                  value={`${result.pit_loss}s`}
+                />
+                <Metric
+                  icon={<Activity />}
+                  label="Deg"
+                  value={`${result.degradation_multiplier}x`}
+                />
+              </div>
+            )}
           </div>
 
           <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
