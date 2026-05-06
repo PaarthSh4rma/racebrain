@@ -2,10 +2,11 @@ from app.simulation.race_engine import simulate_race
 
 
 def compare_strategies(
-    base_lap_time: float,
-    pit_loss: float,
-    strategies: list[list[dict]],
-) -> dict:
+        base_lap_time: float,
+        pit_loss: float,
+        strategies: list[list[dict]],
+        degradation_multiplier: float = 1.0,
+    ) -> dict:
     results = []
 
     for index, strategy in enumerate(strategies):
@@ -13,6 +14,7 @@ def compare_strategies(
             base_lap_time=base_lap_time,
             pit_loss=pit_loss,
             strategy=strategy,
+            degradation_multiplier=degradation_multiplier,
         )
 
         results.append({

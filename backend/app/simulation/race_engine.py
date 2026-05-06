@@ -15,14 +15,14 @@ TYRE_DEGRADATION = {
     "hard": 0.07,
 }
 
-
 def calculate_lap_time(
     base_lap_time: float,
     compound: Compound,
     tyre_age: int,
+    degradation_multiplier: float = 1.0,
 ) -> float:
     compound_delta = TYRE_BASE_PACE[compound]
-    degradation = TYRE_DEGRADATION[compound] * tyre_age
+    degradation = TYRE_DEGRADATION[compound] * tyre_age * degradation_multiplier
 
     return round(base_lap_time + compound_delta + degradation, 3)
 
@@ -31,6 +31,7 @@ def simulate_stint(
     base_lap_time: float,
     compound: Compound,
     stint_laps: int,
+    degradation_multiplier: float = 1.0,
 ) -> list[dict]:
     laps = []
 
@@ -39,6 +40,7 @@ def simulate_stint(
             base_lap_time=base_lap_time,
             compound=compound,
             tyre_age=tyre_age,
+            degradation_multiplier=degradation_multiplier,
         )
 
         laps.append({
@@ -55,6 +57,7 @@ def simulate_race(
     base_lap_time: float = 90.0,
     strategy: list[dict] | None = None,
     pit_loss: float = 22.0,
+    degradation_multiplier: float = 1.0,
 ) -> dict:
     if strategy is None:
         strategy = [
@@ -71,6 +74,7 @@ def simulate_race(
             base_lap_time=base_lap_time,
             compound=stint["compound"],
             stint_laps=stint["laps"],
+            degradation_multiplier=degradation_multiplier,
         )
 
         for lap in stint_laps:
@@ -95,6 +99,7 @@ def simulate_race(
     return {
         "strategy": strategy,
         "pit_loss": pit_loss,
+        "degradation_multiplier": degradation_multiplier,
         "total_laps": len(all_laps),
         "total_time": round(total_time, 3),
         "laps": all_laps,

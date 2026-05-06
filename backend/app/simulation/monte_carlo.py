@@ -17,6 +17,7 @@ def run_monte_carlo_strategy(
     simulations: int = 500,
     lap_variance: float = 0.35,
     pit_variance: float = 1.5,
+    degradation_multiplier: float = 1.0,
 ) -> dict:
     total_times = []
 
@@ -28,6 +29,7 @@ def run_monte_carlo_strategy(
             base_lap_time=simulated_base_lap,
             pit_loss=simulated_pit_loss,
             strategy=strategy,
+            degradation_multiplier=degradation_multiplier,
         )
 
         total_times.append(result["total_time"])
@@ -49,6 +51,7 @@ def compare_monte_carlo_strategies(
     simulations: int = 500,
     lap_variance: float = 0.35,
     pit_variance: float = 1.5,
+    degradation_multiplier: float = 1.0,
 ) -> dict:
     results = []
 
@@ -60,6 +63,7 @@ def compare_monte_carlo_strategies(
             simulations=simulations,
             lap_variance=lap_variance,
             pit_variance=pit_variance,
+            degradation_multiplier=degradation_multiplier,
         )
 
         results.append({
@@ -81,6 +85,7 @@ def calculate_win_probabilities(
     simulations: int = 500,
     lap_variance: float = 0.35,
     pit_variance: float = 1.5,
+    degradation_multiplier: float = 1.0,
 ) -> dict:
     import random
     from statistics import mean, stdev
@@ -99,6 +104,7 @@ def calculate_win_probabilities(
                 base_lap_time=simulated_base_lap,
                 pit_loss=simulated_pit_loss,
                 strategy=strategy,
+                degradation_multiplier=degradation_multiplier,
             )
 
             strategy_id = index + 1

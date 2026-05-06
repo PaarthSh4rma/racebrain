@@ -88,6 +88,7 @@ def monte_carlo_generate_endpoint(request: MonteCarloGenerateRequest):
 
     base_lap_time = profile["base_lap_time"]
     pit_loss = profile["pit_loss"]
+    degradation_multiplier = profile["degradation_multiplier"]
     all_strategies = generate_strategies(
         total_laps=request.total_laps,
         include_one_stop=request.include_one_stop,
@@ -98,6 +99,7 @@ def monte_carlo_generate_endpoint(request: MonteCarloGenerateRequest):
         base_lap_time=base_lap_time,
         pit_loss=pit_loss,
         strategies=all_strategies,
+        degradation_multiplier=degradation_multiplier,
     )
 
     strategies = [
@@ -116,10 +118,14 @@ def monte_carlo_generate_endpoint(request: MonteCarloGenerateRequest):
         simulations=simulations,
         lap_variance=request.lap_variance,
         pit_variance=request.pit_variance,
+        degradation_multiplier=degradation_multiplier,
     )
 
     return {
-        "track": profile,
+        "track": profile["name"],
+        "base_lap_time": base_lap_time,
+        "pit_loss": pit_loss,
+        "degradation_multiplier": degradation_multiplier,
         "total_generated": len(all_strategies),
         "deterministic_candidates_evaluated": len(strategies),
         "simulations_per_strategy": simulations,
