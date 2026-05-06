@@ -98,14 +98,18 @@ def calculate_win_probabilities(
     for _ in range(simulations):
         race_results = []
 
+        safety_car_deployed = random.random() < safety_car_probability
+
+        if safety_car_deployed:
+            safety_car_count += 1
+
         for index, strategy in enumerate(strategies):
-            simulated_base_lap = random.gauss(base_lap_time, lap_variance)
-            safety_car_deployed = random.random() < safety_car_probability
             if safety_car_deployed:
-                safety_car_count += 1
                 simulated_pit_loss = max(8.0, random.gauss(pit_loss * 0.55, pit_variance))
             else:
                 simulated_pit_loss = max(15.0, random.gauss(pit_loss, pit_variance))
+
+            simulated_base_lap = random.gauss(base_lap_time, lap_variance)
 
             result = simulate_race(
                 base_lap_time=simulated_base_lap,

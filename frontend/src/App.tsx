@@ -39,6 +39,9 @@ type ApiResponse = {
   recommendation: string;
   best_strategy: Strategy;
   ranked_strategies: Strategy[];
+  safety_car_probability: number;
+  safety_car_simulations: number;
+  safety_car_rate: number;
 };
 
 const API_URL = "http://127.0.0.1:8000";
@@ -228,7 +231,7 @@ async function loadTrackProfile(trackId: string) {
               />
             </div>
             {result && (
-              <div className="mt-6 grid grid-cols-3 gap-3">
+              <div className="mt-6 grid grid-cols-4 gap-3">
                 <Metric
                   icon={<Timer />}
                   label="Base Lap"
@@ -244,6 +247,11 @@ async function loadTrackProfile(trackId: string) {
                   label="Deg"
                   value={`${result.degradation_multiplier}x`}
                 />
+              <Metric
+                icon={<Flag />}
+                label="SC Probability"
+                value={`${(result.safety_car_rate * 100).toFixed(0)}%`}
+              />
               </div>
             )}
           </div>
