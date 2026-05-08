@@ -67,8 +67,8 @@ def monte_carlo_compare_endpoint(request: MonteCarloCompareRequest):
 
     result = calculate_win_probabilities(
         strategies=strategies,
-        base_lap_time=base_lap_time,
-        pit_loss=pit_loss,
+        base_lap_time=request.base_lap_time,
+        pit_loss=request.pit_loss,
         simulations=simulations,
         lap_variance=request.lap_variance,
         pit_variance=request.pit_variance,
