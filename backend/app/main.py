@@ -7,6 +7,7 @@ from app.api.monte_carlo import router as monte_carlo_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.tracks import router as tracks_router
 from app.api.race_engineer import router as race_engineer_router
+from app.api.ai import router as ai_router
 
 app = FastAPI(
     title="RaceBrain API",
@@ -29,3 +30,4 @@ app.include_router(strategy_router)
 app.include_router(monte_carlo_router)
 app.include_router(tracks_router)
 app.include_router(race_engineer_router)
+app.include_router(ai_router)
