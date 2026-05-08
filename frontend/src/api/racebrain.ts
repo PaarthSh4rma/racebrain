@@ -31,8 +31,8 @@ export async function runMonteCarloSimulation(
       simulations: inputs.simulations,
       lap_variance: 0.35,
       pit_variance: 1.5,
-      include_one_stop: true,
-      include_two_stop: false,
+        include_one_stop: true,
+        include_two_stop: true,
     }),
   });
 
