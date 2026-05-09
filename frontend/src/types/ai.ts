@@ -18,12 +18,17 @@ export type AiResponse = {
 export type ScenarioResponse = {
   summary: string;
   adjustments: Record<string, unknown>;
+  agent_steps?: string[];
   comparison: {
     original_strategy: number;
     new_strategy: number;
     original_win_rate: number;
     new_win_rate: number;
+    win_rate_delta?: number;
     strategy_changed: boolean;
+    original_confidence?: string;
+    new_confidence?: string;
   } | null;
+  contingency?: string[];
   modified_result?: SimulationResult;
 };
