@@ -8,13 +8,29 @@ def run_strategy_simulation(
     track: str,
     total_laps: int = 50,
     simulations: int = 200,
+    adjustments: dict | None = None,
 ):
     profile = get_track_profile(track)
+    adjustments = adjustments or {}
+
+    profile = {
+        **profile,
+        **{
+            key: value
+            for key, value in adjustments.items()
+            if key in profile
+        },
+    }
+    include_one_stop = True
+    include_two_stop = True
+
+    if adjustments.get("max_stops") == 1:
+        include_two_stop = False
 
     strategies = generate_strategies(
         total_laps=total_laps,
-        include_one_stop=True,
-        include_two_stop=True,
+        include_one_stop=include_one_stop,
+        include_two_stop=include_two_stop,
     )
 
     deterministic = compare_strategies(
