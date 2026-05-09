@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Activity, Flag, Gauge, Timer } from "lucide-react";
 
-import RaceEngineerBriefing from "./components/RaceEngineerBriefing";
 import Metric from "./components/Metric";
 import Slider from "./components/Slider";
 import StrategyRanking from "./components/StrategyRanking";
+import RaceEngineerChat from "./components/RaceEngineerChat";
 
 import { getTrackProfile, runMonteCarloSimulation } from "./api/racebrain";
 import type { SimulationInputs, SimulationResult } from "./types/racebrain";
@@ -177,10 +177,10 @@ export default function App() {
               </div>
             )}
             {result && (
-  <StrategyRanking strategies={result.ranked_strategies} />
-)}
+              <StrategyRanking strategies={result.ranked_strategies} />
+            )}
           </div>
-          <RaceEngineerBriefing track={track} totalLaps={inputs.total_laps} />
+          <RaceEngineerChat result={result} />
         </section>
       </div>
     </main>
