@@ -21,6 +21,22 @@ def run_strategy_simulation(
             if key in profile
         },
     }
+
+    base_lap_time = profile["base_lap_time"]
+    pit_loss = profile["pit_loss"]
+    degradation_multiplier = profile["degradation_multiplier"]
+    safety_car_probability = profile["safety_car_probability"]
+
+    if "base_lap_time_multiplier" in adjustments:
+        base_lap_time *= adjustments["base_lap_time_multiplier"]
+
+    if "pit_loss_multiplier" in adjustments:
+        pit_loss *= adjustments["pit_loss_multiplier"]
+
+    pit_variance = 1.5
+    if "pit_variance_multiplier" in adjustments:
+        pit_variance *= adjustments["pit_variance_multiplier"]
+
     include_one_stop = True
     include_two_stop = True
 
@@ -34,10 +50,10 @@ def run_strategy_simulation(
     )
 
     deterministic = compare_strategies(
-        base_lap_time=profile["base_lap_time"],
-        pit_loss=profile["pit_loss"],
+        base_lap_time=base_lap_time,
+        pit_loss=pit_loss,
+        degradation_multiplier=degradation_multiplier,
         strategies=strategies,
-        degradation_multiplier=profile["degradation_multiplier"],
     )
 
     candidate_strategies = [
@@ -47,14 +63,14 @@ def run_strategy_simulation(
 
     monte_carlo = calculate_win_probabilities(
         strategies=candidate_strategies,
-        base_lap_time=profile["base_lap_time"],
-        pit_loss=profile["pit_loss"],
         simulations=simulations,
         lap_variance=0.35,
-        pit_variance=1.5,
-        degradation_multiplier=profile["degradation_multiplier"],
-        safety_car_probability=profile["safety_car_probability"],
-    )
+        base_lap_time=base_lap_time,
+        pit_loss=pit_loss,
+        degradation_multiplier=degradation_multiplier,
+        safety_car_probability=safety_car_probability,
+        pit_variance=pit_variance,    
+        )
 
     return {
         "track": profile["name"],
