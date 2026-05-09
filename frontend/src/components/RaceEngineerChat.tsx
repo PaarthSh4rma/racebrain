@@ -64,7 +64,24 @@ export default function RaceEngineerChat({
     setLoading(true);
 
     try {
-        if (isScenarioQuestion(message)) {
+        const scenarioKeywords = [
+  "degradation",
+  "safety car",
+  "one-stop",
+  "one stop",
+  "increase",
+  "decrease",
+  "higher",
+  "lower",
+];
+
+const isScenario =
+  message.toLowerCase().includes("what if") &&
+  scenarioKeywords.some((keyword) =>
+    message.toLowerCase().includes(keyword)
+  );
+
+if (isScenario) {
         const res = await fetch(
             "http://127.0.0.1:8000/ai/scenario",
             {
@@ -221,6 +238,19 @@ export default function RaceEngineerChat({
           >
             {loading ? "Analysing..." : "Ask Race Engineer"}
           </button>
+
+{scenarioResponse && !scenarioResponse.comparison && (
+  <div className="mt-6 rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-4">
+    <p className="text-sm uppercase tracking-[0.2em] text-yellow-400">
+      Scenario Not Detected
+    </p>
+
+    <p className="mt-3 text-white/80">
+      {scenarioResponse.summary}
+    </p>
+  </div>
+)}
+
 {scenarioResponse?.comparison && (
   <div className="mt-6 space-y-4">
     <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-4">
