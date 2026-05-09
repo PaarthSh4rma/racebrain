@@ -1,18 +1,21 @@
 import { useState } from "react";
 import type { SimulationResult } from "../types/racebrain";
 import { formatStrategy } from "../utils/formatStrategy";
+import ReactMarkdown from "react-markdown";
 
 type ExplainResponse = {
-  summary: string;
+  summary?: string;
+  response?: string;
   recommendation_type?: string;
   risk_level?: string;
   key_factors?: string[];
   tradeoffs?: string[];
   pit_wall_call?: string;
   follow_up_questions?: string[];
-  tools_used: string[];
+  tools_used?: string[];
   answer_type?: string;
   points?: string[];
+  analysis_used?: string;
 };
 
 export default function RaceEngineerChat({
@@ -23,25 +26,40 @@ export default function RaceEngineerChat({
   const [message, setMessage] = useState("Why is this strategy best?");
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<ExplainResponse | null>(null);
+  const [useLlm, setUseLlm] = useState(false);
 
-  async function sendMessage() {
+    async function sendMessage() {
     if (!result) return;
 
     setLoading(true);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/ai/explain", {
+        const endpoint = useLlm
+        ? "http://127.0.0.1:8000/ai/llm-explain"
+        : "http://127.0.0.1:8000/ai/explain";
+
+        const body = useLlm
+        ? {
+            question: message,
+            simulation_result: result,
+            }
+        : {
+            message,
+            simulation_result: result,
+            };
+
+        const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, simulation_result: result }),
-      });
+        body: JSON.stringify(body),
+        });
 
-      const data = await res.json();
-      setResponse(data);
+        const data = await res.json();
+        setResponse(data);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  }
+    }
 
   const best = result?.best_strategy;
 
@@ -113,6 +131,26 @@ export default function RaceEngineerChat({
             </ul>
           </div>
 
+          <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div>
+                <p className="text-sm font-black text-white">LLM Mode</p>
+                <p className="text-sm text-white/50">
+                Uses grounded OpenRouter response instead of deterministic analysis only.
+                </p>
+            </div>
+
+            <button
+                onClick={() => setUseLlm((current) => !current)}
+                className={`rounded-full px-4 py-2 text-sm font-black transition ${
+                useLlm
+                    ? "bg-cyan-500 text-black"
+                    : "bg-white/10 text-white/60"
+                }`}
+            >
+                {useLlm ? "ON" : "OFF"}
+            </button>
+            </div>
+
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -134,7 +172,11 @@ export default function RaceEngineerChat({
       <p className="text-sm uppercase tracking-[0.2em] text-cyan-400">
         Engineer Summary
       </p>
-      <p className="mt-3 text-white/80">{response.summary}</p>
+        <div className="prose prose-invert mt-3 max-w-none prose-p:text-white/80 prose-strong:text-cyan-300">
+        <ReactMarkdown>
+            {response.response ?? response.summary ?? ""}
+        </ReactMarkdown>
+        </div>
     </div>
 
     {response.points && response.points.length > 0 && (
@@ -212,6 +254,15 @@ export default function RaceEngineerChat({
         </p>
         <p className="mt-3 text-white/80">{response.pit_wall_call}</p>
       </div>
+    )}
+
+    {response.analysis_used && (
+    <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4">
+        <p className="text-sm uppercase tracking-[0.2em] text-cyan-400">
+        Analysis Used
+        </p>
+        <p className="mt-2 text-white/80">{response.analysis_used}</p>
+    </div>
     )}
 
     {response.tools_used && response.tools_used.length > 0 && (

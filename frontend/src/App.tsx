@@ -45,13 +45,13 @@ export default function App() {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden text-white">
+    <main className="min-h-screen overflow-x-hidden text-white">
       <div className="absolute inset-0 opacity-30">
         <div className="absolute left-[-10%] top-16 h-72 w-72 rounded-full bg-red-600 blur-3xl" />
         <div className="absolute right-[-10%] top-40 h-96 w-96 rounded-full bg-indigo-500 blur-3xl" />
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-6 py-8">
+     <div className="relative mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
         <nav className="mb-10 flex items-center justify-between rounded-3xl border border-white/10 bg-white/5 px-6 py-4 backdrop-blur-xl">
           <div>
             <p className="text-xs uppercase tracking-[0.45em] text-red-400">
@@ -67,8 +67,8 @@ export default function App() {
           </div>
         </nav>
 
-        <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-          <div className="rounded-[2rem] border border-white/10 bg-black/40 p-8 shadow-2xl backdrop-blur-xl">
+       <section className="grid gap-6 lg:grid-cols-2">
+          <div className="min-w-0 rounded-[2rem] border border-white/10 bg-black/40 p-8 shadow-2xl backdrop-blur-xl">
             <div className="mb-8 flex items-center gap-3">
               <Flag className="text-red-500" />
               <span className="text-sm uppercase tracking-[0.35em] text-white/50">
