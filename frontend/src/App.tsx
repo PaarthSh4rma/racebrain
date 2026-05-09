@@ -4,7 +4,7 @@ import { Activity, Flag, Gauge, Timer } from "lucide-react";
 import Metric from "./components/Metric";
 import Slider from "./components/Slider";
 import StrategyRanking from "./components/StrategyRanking";
-import RaceEngineerChat from "./components/RaceEngineerChat";
+import RaceEngineerPanel from "./components/ai/RaceEngineerPanel";
 
 import { getTrackProfile, runMonteCarloSimulation } from "./api/racebrain";
 import type { SimulationInputs, SimulationResult } from "./types/racebrain";
@@ -180,8 +180,9 @@ export default function App() {
               <StrategyRanking strategies={result.ranked_strategies} />
             )}
           </div>
-          <RaceEngineerChat
+<RaceEngineerPanel
   result={result}
+  track={track}
   totalLaps={inputs.total_laps}
 />
         </section>
