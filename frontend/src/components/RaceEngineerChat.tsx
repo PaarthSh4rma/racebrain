@@ -4,13 +4,15 @@ import { formatStrategy } from "../utils/formatStrategy";
 
 type ExplainResponse = {
   summary: string;
-  recommendation_type: string;
-  risk_level: string;
-  key_factors: string[];
-  tradeoffs: string[];
-  pit_wall_call: string;
-  follow_up_questions: string[];
+  recommendation_type?: string;
+  risk_level?: string;
+  key_factors?: string[];
+  tradeoffs?: string[];
+  pit_wall_call?: string;
+  follow_up_questions?: string[];
   tools_used: string[];
+  answer_type?: string;
+  points?: string[];
 };
 
 export default function RaceEngineerChat({
@@ -135,44 +137,101 @@ export default function RaceEngineerChat({
       <p className="mt-3 text-white/80">{response.summary}</p>
     </div>
 
-    <div className="grid grid-cols-2 gap-3">
+    {response.points && response.points.length > 0 && (
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
         <p className="text-sm uppercase tracking-[0.2em] text-white/40">
-          Recommendation
+          Analysis
         </p>
-        <p className="mt-2 text-xl font-black capitalize">
-          {response.recommendation_type}
-        </p>
-      </div>
 
+        <ul className="mt-3 space-y-2 text-white/70">
+          {response.points.map((item, index) => (
+            <li key={index}>• {item}</li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    {(response.recommendation_type || response.risk_level) && (
+      <div className="grid grid-cols-2 gap-3">
+        {response.recommendation_type && (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-sm uppercase tracking-[0.2em] text-white/40">
+              Recommendation
+            </p>
+            <p className="mt-2 text-xl font-black capitalize">
+              {response.recommendation_type}
+            </p>
+          </div>
+        )}
+
+        {response.risk_level && (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-sm uppercase tracking-[0.2em] text-white/40">
+              Risk
+            </p>
+            <p className="mt-2 text-xl font-black capitalize">
+              {response.risk_level}
+            </p>
+          </div>
+        )}
+      </div>
+    )}
+
+    {response.key_factors && response.key_factors.length > 0 && (
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
         <p className="text-sm uppercase tracking-[0.2em] text-white/40">
-          Risk
+          Key Factors
         </p>
-        <p className="mt-2 text-xl font-black capitalize">
-          {response.risk_level}
-        </p>
+
+        <ul className="mt-3 space-y-2 text-white/70">
+          {response.key_factors.map((item, index) => (
+            <li key={index}>• {item}</li>
+          ))}
+        </ul>
       </div>
-    </div>
+    )}
 
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-      <p className="text-sm uppercase tracking-[0.2em] text-white/40">
-        Key Factors
-      </p>
+    {response.tradeoffs && response.tradeoffs.length > 0 && (
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <p className="text-sm uppercase tracking-[0.2em] text-white/40">
+          Tradeoffs
+        </p>
 
-      <ul className="mt-3 space-y-2 text-white/70">
-        {response.key_factors.map((item, index) => (
-          <li key={index}>• {item}</li>
-        ))}
-      </ul>
-    </div>
+        <ul className="mt-3 space-y-2 text-white/70">
+          {response.tradeoffs.map((item, index) => (
+            <li key={index}>• {item}</li>
+          ))}
+        </ul>
+      </div>
+    )}
 
-    <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-4">
-      <p className="text-sm uppercase tracking-[0.2em] text-red-400">
-        Pit Wall Call
-      </p>
-      <p className="mt-3 text-white/80">{response.pit_wall_call}</p>
-    </div>
+    {response.pit_wall_call && (
+      <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-4">
+        <p className="text-sm uppercase tracking-[0.2em] text-red-400">
+          Pit Wall Call
+        </p>
+        <p className="mt-3 text-white/80">{response.pit_wall_call}</p>
+      </div>
+    )}
+
+    {response.tools_used && response.tools_used.length > 0 && (
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <p className="text-sm uppercase tracking-[0.2em] text-white/40">
+          Tools Used
+        </p>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {response.tools_used.map((tool) => (
+            <span
+              key={tool}
+              className="rounded-full bg-white/10 px-3 py-1 text-sm text-white/70"
+            >
+              {tool}
+            </span>
+          ))}
+        </div>
+      </div>
+    )}
   </div>
 )}
         </>

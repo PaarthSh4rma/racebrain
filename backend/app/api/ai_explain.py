@@ -1,5 +1,11 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
+from app.ai.analysis_tools import (
+    aggression_analysis,
+    compare_top_two,
+    confidence_analysis,
+    risk_analysis,
+)
 
 router = APIRouter(prefix="/ai", tags=["AI"])
 
@@ -108,6 +114,31 @@ def build_pit_wall_call(result: dict, risk_level: str, recommendation_type: str)
 def explain_strategy(request: ExplainRequest):
     result = request.simulation_result
     best = result["best_strategy"]
+    message = request.message.lower()
+
+    if "confidence" in message or "uncertain" in message:
+        return {
+            **confidence_analysis(result),
+            "tools_used": ["confidence_analysis"],
+        }
+
+    if "compare" in message or "second" in message or "alternative" in message:
+        return {
+            **compare_top_two(result),
+            "tools_used": ["strategy_comparison"],
+        }
+
+    if "risk" in message or "safe" in message or "safest" in message:
+        return {
+            **risk_analysis(result),
+            "tools_used": ["risk_analysis"],
+        }
+
+    if "aggressive" in message or "attack" in message:
+        return {
+            **aggression_analysis(result),
+            "tools_used": ["aggression_analysis"],
+        }
 
     recommendation_type = get_recommendation_type(
         result["win_gap_to_second"],
