@@ -18,22 +18,78 @@ type ExplainResponse = {
   analysis_used?: string;
 };
 
+function isScenarioQuestion(message: string) {
+  const lowered = message.toLowerCase();
+
+  return (
+    lowered.includes("what if") ||
+    lowered.includes("increase") ||
+    lowered.includes("decrease") ||
+    lowered.includes("higher") ||
+    lowered.includes("lower") ||
+    lowered.includes("one-stop") ||
+    lowered.includes("one stop")
+  );
+}
+type ScenarioResponse = {
+  summary: string;
+  adjustments: Record<string, unknown>;
+  comparison: {
+    original_strategy: number;
+    new_strategy: number;
+    original_win_rate: number;
+    new_win_rate: number;
+    strategy_changed: boolean;
+  };
+  modified_result: SimulationResult;
+};
+
 export default function RaceEngineerChat({
   result,
+  totalLaps,
 }: {
   result: SimulationResult | null;
+  totalLaps: number;
 }) {
   const [message, setMessage] = useState("Why is this strategy best?");
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<ExplainResponse | null>(null);
   const [useLlm, setUseLlm] = useState(false);
+  const [scenarioResponse, setScenarioResponse] = useState<ScenarioResponse | null>(null);
 
     async function sendMessage() {
+    setScenarioResponse(null);
     if (!result) return;
 
     setLoading(true);
 
     try {
+        if (isScenarioQuestion(message)) {
+        const res = await fetch(
+            "http://127.0.0.1:8000/ai/scenario",
+            {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                question: message,
+                track: result.track,
+                total_laps: totalLaps,
+                simulations: result.simulations_per_strategy,
+                original_result: result,
+            }),
+            }
+        );
+
+        const data = await res.json();
+
+        setScenarioResponse(data);
+        setResponse(null);
+
+        setLoading(false);
+        return;
+        }
         const endpoint = useLlm
         ? "http://127.0.0.1:8000/ai/llm-explain"
         : "http://127.0.0.1:8000/ai/explain";
@@ -165,7 +221,68 @@ export default function RaceEngineerChat({
           >
             {loading ? "Analysing..." : "Ask Race Engineer"}
           </button>
+{scenarioResponse?.comparison && (
+  <div className="mt-6 space-y-4">
+    <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-4">
+      <p className="text-sm uppercase tracking-[0.2em] text-yellow-400">
+        Scenario Simulation
+      </p>
 
+      <p className="mt-3 text-white/80">
+        {scenarioResponse.summary}
+      </p>
+    </div>
+
+    <div className="grid grid-cols-2 gap-4">
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <p className="text-sm uppercase tracking-[0.2em] text-white/40">
+          Original
+        </p>
+
+        <p className="mt-2 text-3xl font-black">
+          Strategy {scenarioResponse?.comparison.original_strategy}
+        </p>
+
+        <p className="mt-2 text-white/60">
+          {scenarioResponse?.comparison.original_win_rate}% win rate
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4">
+        <p className="text-sm uppercase tracking-[0.2em] text-cyan-400">
+          Scenario Result
+        </p>
+
+        <p className="mt-2 text-3xl font-black">
+          Strategy {scenarioResponse?.comparison.new_strategy}
+        </p>
+
+        <p className="mt-2 text-white/60">
+          {scenarioResponse?.comparison.new_win_rate}% win rate
+        </p>
+      </div>
+    </div>
+
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+      <p className="text-sm uppercase tracking-[0.2em] text-white/40">
+        Applied Adjustments
+      </p>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {Object.entries(scenarioResponse.adjustments || {}).map(
+          ([key, value]) => (
+            <span
+              key={key}
+              className="rounded-full bg-white/10 px-3 py-1 text-sm"
+            >
+              {key}: {String(value)}
+            </span>
+          )
+        )}
+      </div>
+    </div>
+  </div>
+)}
 {response && (
   <div className="mt-6 space-y-4">
     <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4">

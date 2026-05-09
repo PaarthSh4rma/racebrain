@@ -180,7 +180,10 @@ export default function App() {
               <StrategyRanking strategies={result.ranked_strategies} />
             )}
           </div>
-          <RaceEngineerChat result={result} />
+          <RaceEngineerChat
+  result={result}
+  totalLaps={inputs.total_laps}
+/>
         </section>
       </div>
     </main>
