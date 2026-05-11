@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Activity, Flag, Gauge, Timer } from "lucide-react";
-
+import { motion } from "framer-motion";
 import Metric from "./components/Metric";
 import Slider from "./components/Slider";
 import StrategyRanking from "./components/StrategyRanking";
@@ -45,6 +45,7 @@ export default function App() {
   }
 
   return (
+
     <main className="min-h-screen overflow-x-hidden text-white">
       <div className="absolute inset-0 opacity-30">
         <div className="absolute left-[-10%] top-16 h-72 w-72 rounded-full bg-red-600 blur-3xl" />
@@ -66,7 +67,12 @@ export default function App() {
             {track.toUpperCase()}
           </div>
         </nav>
-
+<motion.div
+  initial={{ opacity: 0, y: 24 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.5 }}
+  className="min-w-0 rounded-[2rem] border border-white/10 bg-black/40 p-8 shadow-2xl backdrop-blur-xl"
+>
        <section className="grid gap-6 lg:grid-cols-2">
           <div className="min-w-0 rounded-[2rem] border border-white/10 bg-black/40 p-8 shadow-2xl backdrop-blur-xl">
             <div className="mb-8 flex items-center gap-3">
@@ -180,12 +186,19 @@ export default function App() {
               <StrategyRanking strategies={result.ranked_strategies} />
             )}
           </div>
+          
+<motion.div
+  initial={{ opacity: 0, y: 24 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.5, delay: 0.1 }}
+>
 <RaceEngineerPanel
   result={result}
   track={track}
   totalLaps={inputs.total_laps}
-/>
+/></motion.div>
         </section>
+        </motion.div>
       </div>
     </main>
   );

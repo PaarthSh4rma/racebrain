@@ -131,10 +131,19 @@ export default function RaceEngineerPanel({
             disabled={loading}
             className="mt-4 rounded-2xl bg-cyan-500 px-6 py-3 font-black text-black transition hover:scale-[1.02] disabled:opacity-50"
           >
-            {loading ? "Analysing..." : "Ask Race Engineer"}
+            {loading ? "Race Engineer analysing..." : "Ask Race Engineer"}
           </button>
 
-          {scenarioResponse && <ScenarioResultCard scenario={scenarioResponse} />}
+          {loading && (
+  <div className="mt-4 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4 text-cyan-200">
+    Running analysis pipeline...
+  </div>
+)}
+
+          {scenarioResponse && 
+            <ScenarioResultCard
+            scenario={scenarioResponse}
+            />}
           {aiResponse && <AiResponseCard response={aiResponse} />}
         </>
       )}

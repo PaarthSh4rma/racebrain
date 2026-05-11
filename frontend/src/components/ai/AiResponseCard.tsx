@@ -1,5 +1,6 @@
 import type { AiResponse } from "../../types/ai";
-
+import { motion } from "framer-motion";
+import ReactMarkdown from "react-markdown";
 function ListBlock({
   title,
   items,
@@ -30,14 +31,21 @@ export default function AiResponseCard({
   response: AiResponse;
 }) {
   return (
-    <div className="mt-6 space-y-4">
+<motion.div
+  initial={{ opacity: 0, y: 16 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.35 }}
+  className="mt-6 space-y-4"
+>
       <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4">
         <p className="text-sm uppercase tracking-[0.2em] text-cyan-400">
           Engineer Summary
         </p>
-        <p className="mt-3 whitespace-pre-line text-white/80">
-          {response.response ?? response.summary}
-        </p>
+        <div className="prose prose-invert max-w-none prose-p:text-white/80 prose-strong:text-white prose-li:text-white/75">
+        <ReactMarkdown>
+            {response.response ?? response.summary}
+        </ReactMarkdown>
+        </div>
       </div>
 
       {(response.recommendation_type || response.risk_level) && (
@@ -87,6 +95,6 @@ export default function AiResponseCard({
           <p className="mt-2 text-white/80">{response.analysis_used}</p>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

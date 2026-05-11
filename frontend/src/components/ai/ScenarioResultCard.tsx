@@ -1,4 +1,6 @@
 import type { ScenarioResponse } from "../../types/ai";
+import { motion } from "framer-motion";
+import { formatStrategy } from "../../utils/formatStrategy";
 
 export default function ScenarioResultCard({
   scenario,
@@ -17,7 +19,12 @@ export default function ScenarioResultCard({
   }
 
   return (
-    <div className="mt-6 space-y-4">
+<motion.div
+  initial={{ opacity: 0, y: 16 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.35 }}
+  className="mt-6 space-y-4"
+>
       <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-4">
         <p className="text-sm uppercase tracking-[0.2em] text-yellow-400">
           Scenario Simulation
@@ -47,23 +54,29 @@ export default function ScenarioResultCard({
           <p className="mt-2 text-3xl font-black">
             Strategy {scenario.comparison.original_strategy}
           </p>
-          <p className="mt-2 text-white/60">
+          <p className="mt-2 text-white/70">
             {scenario.comparison.original_win_rate}% win rate
           </p>
+        
         </div>
 
-        
-
+      
         <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4">
           <p className="text-sm uppercase tracking-[0.2em] text-cyan-400">
             Scenario Result
           </p>
           <p className="mt-2 text-3xl font-black">
             Strategy {scenario.comparison.new_strategy}
+            {scenario.modified_result?.best_strategy?.strategy && (
+            <p className="mt-2 text-sm text-white/50">
+              {formatStrategy(scenario.modified_result.best_strategy.strategy)}
+            </p>
+          )}
           </p>
-          <p className="mt-2 text-white/60">
+          <p className="mt-2 text-white/70">
             {scenario.comparison.new_win_rate}% win rate
           </p>
+
         </div>
       </div>
 
@@ -114,6 +127,6 @@ export default function ScenarioResultCard({
     </ul>
   </div>
 )}
-    </div>
+    </motion.div>
   );
 }
