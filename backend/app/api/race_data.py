@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query
-
+from app.services.race_state_builder import build_race_state
 from app.data_sources.openf1_client import OpenF1Client
 
 router = APIRouter(prefix="/race-data", tags=["Race Data"])
@@ -55,3 +55,13 @@ def get_weather(session_key: int):
 @router.get("/sessions/{session_key}/race-control")
 def get_race_control(session_key: int):
     return client.get_race_control(session_key)
+
+@router.get("/sessions/{session_key}/race-state")
+def get_race_state(
+    session_key: int,
+    driver_number: int | None = Query(default=None),
+):
+    return build_race_state(
+        session_key=session_key,
+        driver_number=driver_number,
+    )
