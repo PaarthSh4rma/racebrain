@@ -11,6 +11,8 @@ from app.api.ai import router as ai_router
 from app.api.ai_explain import router as ai_explain_router
 from app.api.ai_llm import router as ai_llm_router
 from app.api.ai_scenario import router as ai_scenario_router
+from app.api.race_data import router as race_data_router
+
 app = FastAPI(
     title="RaceBrain API",
     description="F1 strategy simulation and pit wall intelligence engine.",
@@ -36,3 +38,4 @@ app.include_router(ai_router)
 app.include_router(ai_explain_router)
 app.include_router(ai_llm_router)
 app.include_router(ai_scenario_router)
+app.include_router(race_data_router)
