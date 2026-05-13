@@ -12,6 +12,7 @@ from app.api.ai_explain import router as ai_explain_router
 from app.api.ai_llm import router as ai_llm_router
 from app.api.ai_scenario import router as ai_scenario_router
 from app.api.race_data import router as race_data_router
+from app.api.live_strategy import router as live_strategy_router
 
 app = FastAPI(
     title="RaceBrain API",
@@ -39,3 +40,4 @@ app.include_router(ai_explain_router)
 app.include_router(ai_llm_router)
 app.include_router(ai_scenario_router)
 app.include_router(race_data_router)
+app.include_router(live_strategy_router)
