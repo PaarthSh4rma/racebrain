@@ -5,7 +5,7 @@ import Metric from "./components/Metric";
 import Slider from "./components/Slider";
 import StrategyRanking from "./components/StrategyRanking";
 import RaceEngineerPanel from "./components/ai/RaceEngineerPanel";
-
+import LiveStrategyPanel from "./components/live/LiveStrategyPanel";
 import { getTrackProfile, runMonteCarloSimulation } from "./api/racebrain";
 import type { SimulationInputs, SimulationResult } from "./types/racebrain";
 
@@ -198,6 +198,8 @@ export default function App() {
   totalLaps={inputs.total_laps}
 /></motion.div>
         </section>
+
+<LiveStrategyPanel />
         </motion.div>
       </div>
     </main>
