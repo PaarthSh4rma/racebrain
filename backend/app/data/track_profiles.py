@@ -1,7 +1,53 @@
-from typing import Dict
-
-
-TRACK_PROFILES: Dict[str, dict] = {
+TRACK_PROFILES = {
+    "bahrain": {
+        "name": "Bahrain",
+        "base_lap_time": 96.5,
+        "pit_loss": 22.0,
+        "degradation_multiplier": 1.25,
+        "safety_car_probability": 0.25,
+    },
+    "jeddah": {
+        "name": "Jeddah",
+        "base_lap_time": 91.5,
+        "pit_loss": 21.5,
+        "degradation_multiplier": 0.95,
+        "safety_car_probability": 0.45,
+    },
+    "melbourne": {
+        "name": "Melbourne",
+        "base_lap_time": 80.5,
+        "pit_loss": 21.0,
+        "degradation_multiplier": 1.0,
+        "safety_car_probability": 0.35,
+    },
+    "suzuka": {
+        "name": "Suzuka",
+        "base_lap_time": 92.0,
+        "pit_loss": 22.5,
+        "degradation_multiplier": 1.15,
+        "safety_car_probability": 0.25,
+    },
+    "shanghai": {
+        "name": "Shanghai",
+        "base_lap_time": 96.0,
+        "pit_loss": 23.0,
+        "degradation_multiplier": 1.2,
+        "safety_car_probability": 0.25,
+    },
+    "miami": {
+        "name": "Miami",
+        "base_lap_time": 91.0,
+        "pit_loss": 21.5,
+        "degradation_multiplier": 1.1,
+        "safety_car_probability": 0.35,
+    },
+    "imola": {
+        "name": "Imola",
+        "base_lap_time": 79.5,
+        "pit_loss": 24.0,
+        "degradation_multiplier": 0.95,
+        "safety_car_probability": 0.4,
+    },
     "monaco": {
         "name": "Monaco",
         "base_lap_time": 74.5,
@@ -9,40 +55,124 @@ TRACK_PROFILES: Dict[str, dict] = {
         "degradation_multiplier": 0.85,
         "safety_car_probability": 0.4,
     },
-    "monza": {
-        "name": "Monza",
+    "montreal": {
+        "name": "Montreal",
+        "base_lap_time": 75.0,
+        "pit_loss": 19.5,
+        "degradation_multiplier": 1.05,
+        "safety_car_probability": 0.45,
+    },
+    "barcelona": {
+        "name": "Barcelona",
         "base_lap_time": 80.0,
-        "pit_loss": 24.0,
-        "degradation_multiplier": 0.7,
+        "pit_loss": 22.0,
+        "degradation_multiplier": 1.25,
         "safety_car_probability": 0.2,
+    },
+    "red_bull_ring": {
+        "name": "Red Bull Ring",
+        "base_lap_time": 69.0,
+        "pit_loss": 20.0,
+        "degradation_multiplier": 1.05,
+        "safety_car_probability": 0.3,
     },
     "silverstone": {
         "name": "Silverstone",
-        "base_lap_time": 88.0,
-        "pit_loss": 21.5,
-        "degradation_multiplier": 1.0,
-        "safety_car_probability": 0.25,
-    },
-    "spa": {
-        "name": "Spa",
-        "base_lap_time": 104.0,
+        "base_lap_time": 90.0,
         "pit_loss": 23.0,
         "degradation_multiplier": 1.1,
         "safety_car_probability": 0.3,
     },
-    "suzuka": {
-        "name": "Suzuka",
-        "base_lap_time": 91.0,
-        "pit_loss": 22.5,
+    "hungaroring": {
+        "name": "Hungaroring",
+        "base_lap_time": 78.5,
+        "pit_loss": 21.5,
+        "degradation_multiplier": 1.15,
+        "safety_car_probability": 0.3,
+    },
+    "spa": {
+        "name": "Spa",
+        "base_lap_time": 105.0,
+        "pit_loss": 23.5,
         "degradation_multiplier": 1.05,
-        "safety_car_probability": 0.28,
+        "safety_car_probability": 0.35,
+    },
+    "zandvoort": {
+        "name": "Zandvoort",
+        "base_lap_time": 73.5,
+        "pit_loss": 21.0,
+        "degradation_multiplier": 1.2,
+        "safety_car_probability": 0.35,
+    },
+    "monza": {
+        "name": "Monza",
+        "base_lap_time": 82.0,
+        "pit_loss": 24.5,
+        "degradation_multiplier": 0.9,
+        "safety_car_probability": 0.25,
+    },
+    "baku": {
+        "name": "Baku",
+        "base_lap_time": 103.0,
+        "pit_loss": 21.0,
+        "degradation_multiplier": 0.95,
+        "safety_car_probability": 0.5,
+    },
+    "singapore": {
+        "name": "Singapore",
+        "base_lap_time": 102.0,
+        "pit_loss": 28.0,
+        "degradation_multiplier": 1.3,
+        "safety_car_probability": 0.55,
+    },
+    "austin": {
+        "name": "Austin",
+        "base_lap_time": 98.0,
+        "pit_loss": 22.5,
+        "degradation_multiplier": 1.2,
+        "safety_car_probability": 0.25,
+    },
+    "mexico_city": {
+        "name": "Mexico City",
+        "base_lap_time": 81.0,
+        "pit_loss": 22.0,
+        "degradation_multiplier": 0.95,
+        "safety_car_probability": 0.25,
+    },
+    "interlagos": {
+        "name": "Interlagos",
+        "base_lap_time": 73.0,
+        "pit_loss": 20.0,
+        "degradation_multiplier": 1.15,
+        "safety_car_probability": 0.4,
+    },
+    "las_vegas": {
+        "name": "Las Vegas",
+        "base_lap_time": 94.0,
+        "pit_loss": 21.0,
+        "degradation_multiplier": 0.9,
+        "safety_car_probability": 0.3,
+    },
+    "losail": {
+        "name": "Losail",
+        "base_lap_time": 85.0,
+        "pit_loss": 24.0,
+        "degradation_multiplier": 1.35,
+        "safety_car_probability": 0.25,
+    },
+    "yas_marina": {
+        "name": "Yas Marina",
+        "base_lap_time": 88.0,
+        "pit_loss": 22.0,
+        "degradation_multiplier": 1.0,
+        "safety_car_probability": 0.25,
     },
 }
 
 
-def get_track_profile(track: str) -> dict:
-    key = track.lower()
-    if key not in TRACK_PROFILES:
-        raise ValueError(f"Track '{track}' not supported")
+def get_track_profile(track: str):
+    return TRACK_PROFILES.get(track, TRACK_PROFILES["monaco"])
 
-    return TRACK_PROFILES[key]
+
+def get_all_track_profiles():
+    return TRACK_PROFILES

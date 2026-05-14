@@ -21,6 +21,33 @@ export default function App() {
     simulations: 200,
   });
 
+  const TRACK_OPTIONS = [
+  ["bahrain", "Bahrain"],
+  ["jeddah", "Jeddah"],
+  ["melbourne", "Melbourne"],
+  ["suzuka", "Suzuka"],
+  ["shanghai", "Shanghai"],
+  ["miami", "Miami"],
+  ["imola", "Imola"],
+  ["monaco", "Monaco"],
+  ["montreal", "Montreal"],
+  ["barcelona", "Barcelona"],
+  ["red_bull_ring", "Red Bull Ring"],
+  ["silverstone", "Silverstone"],
+  ["hungaroring", "Hungaroring"],
+  ["spa", "Spa"],
+  ["zandvoort", "Zandvoort"],
+  ["monza", "Monza"],
+  ["baku", "Baku"],
+  ["singapore", "Singapore"],
+  ["austin", "Austin"],
+  ["mexico_city", "Mexico City"],
+  ["interlagos", "Interlagos"],
+  ["las_vegas", "Las Vegas"],
+  ["losail", "Losail"],
+  ["yas_marina", "Yas Marina"],
+] as const;
+
   async function handleTrackChange(trackId: string) {
     setTrack(trackId);
 
@@ -102,11 +129,11 @@ export default function App() {
                 onChange={(e) => handleTrackChange(e.target.value)}
                 className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm font-bold uppercase tracking-wider text-white outline-none"
               >
-                <option value="monaco">Monaco</option>
-                <option value="monza">Monza</option>
-                <option value="silverstone">Silverstone</option>
-                <option value="spa">Spa</option>
-                <option value="suzuka">Suzuka</option>
+              {TRACK_OPTIONS.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
               </select>
             </div>
 
