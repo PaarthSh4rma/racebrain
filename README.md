@@ -19,6 +19,16 @@ FastAPI
 
 Circuit metadata is owned by the backend and exposed through `GET /tracks`. The frontend loads those profiles and can override base lap time and pit loss per simulation request. Monte Carlo requests may include a seed for reproducible comparisons; ordinary requests remain unseeded.
 
+Production uses a Vercel-hosted Vite frontend calling a Render-hosted FastAPI service over HTTPS. Neither deployment includes a database or persistent application storage.
+
+## Live deployment
+
+- Frontend: https://racebrain-mauve.vercel.app
+- Backend: https://racebrain-api.onrender.com
+- API documentation: https://racebrain-api.onrender.com/docs
+
+To try the demo, open the frontend, select a circuit, optionally adjust base lap time or pit loss, and run the strategy model. Historical OpenF1 requests depend on upstream availability. The optional LLM mode is unavailable in this deployment because no OpenRouter key is configured.
+
 ## Local setup
 
 Backend (Python 3.11+):
@@ -70,21 +80,21 @@ npm run build
 
 GitHub Actions runs the same backend and frontend checks on pushes and pull requests.
 
-## Deployment foundations
+## Deployment
 
 ### Render backend
 
-Create a Blueprint from `render.yaml`, set `CORS_ALLOWED_ORIGINS` to the final Vercel origin, and optionally set `OPENROUTER_API_KEY`. The configured health check is `/health`.
+The backend is deployed from `render.yaml` on Render's free web-service plan. Set `CORS_ALLOWED_ORIGINS` to the exact Vercel origin and optionally set `OPENROUTER_API_KEY`. The configured health check is `/health`.
 
-Backend URL: `https://<your-render-service>.onrender.com`
+Production URL: https://racebrain-api.onrender.com
 
 ### Vercel frontend
 
 Import the repository, set the project root to `frontend`, and set `VITE_API_URL` to the Render backend URL. `frontend/vercel.json` declares the Vite build and output directory.
 
-Frontend URL: `https://<your-vercel-project>.vercel.app`
+Production URL: https://racebrain-mauve.vercel.app
 
-No deployment is performed by this repository configuration.
+Production environment-variable names are `CORS_ALLOWED_ORIGINS` and optional `OPENROUTER_API_KEY` on Render, plus `VITE_API_URL` on Vercel. Values should be configured in the hosting dashboards and never committed.
 
 ## Current capabilities and limitations
 
@@ -94,6 +104,7 @@ No deployment is performed by this repository configuration.
 - Reads historical or upstream-available OpenF1 sessions, drivers, laps, stints, weather, and race-control messages.
 - Produces heuristic strategy calls from that race state; it does not operate a live timing feed or guarantee real-time decisions.
 - LLM explanations are constrained by supplied simulation data but still depend on an external model provider.
+- The free Render service can spin down when idle, so the first API request after inactivity may take noticeably longer.
 - There is no authentication, database, persistent telemetry pipeline, historical replay UI, or production monitoring yet.
 
 ## Main endpoints
