@@ -171,7 +171,7 @@ TRACK_PROFILES = {
 
 
 def get_track_profile(track: str):
-    return TRACK_PROFILES.get(track, TRACK_PROFILES["monaco"])
+    return TRACK_PROFILES.get(track.lower())
 
 
 def get_all_track_profiles():

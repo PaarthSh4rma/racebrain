@@ -3,8 +3,7 @@ import type {
   LiveStrategyResponse,
   RaceSession,
 } from "../types/raceData";
-
-const API_URL = "http://127.0.0.1:8000";
+import { API_URL, apiError } from "./config";
 
 export async function getSessions({
   year,
@@ -24,7 +23,7 @@ export async function getSessions({
   const response = await fetch(`${API_URL}/race-data/sessions?${params}`);
 
   if (!response.ok) {
-    throw new Error("Failed to fetch sessions");
+    throw await apiError(response, "Failed to search OpenF1 sessions.");
   }
 
   return response.json();
@@ -36,7 +35,7 @@ export async function getDrivers(sessionKey: number): Promise<Driver[]> {
   );
 
   if (!response.ok) {
-    throw new Error("Failed to fetch drivers");
+    throw await apiError(response, "Failed to load drivers.");
   }
 
   return response.json();
@@ -59,7 +58,7 @@ export async function getLiveStrategy({
   );
 
   if (!response.ok) {
-    throw new Error("Failed to fetch live strategy");
+    throw await apiError(response, "Failed to generate strategy.");
   }
 
   return response.json();

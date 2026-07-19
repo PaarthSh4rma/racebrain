@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_URL, apiError } from "../api/config";
 
 type BriefingResponse = {
   track: string;
@@ -24,13 +25,16 @@ export default function RaceEngineerBriefing({
 }) {
   const [loading, setLoading] = useState(false);
   const [briefing, setBriefing] = useState<BriefingResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function generateBriefing() {
     setLoading(true);
+    setError(null);
+    setBriefing(null);
 
     try {
       const response = await fetch(
-        "http://127.0.0.1:8000/race-engineer/briefing",
+        `${API_URL}/race-engineer/briefing`,
         {
           method: "POST",
           headers: {
@@ -44,13 +48,15 @@ export default function RaceEngineerBriefing({
         }
       );
 
+      if (!response.ok) throw await apiError(response, "Failed to generate briefing.");
+
       const data = await response.json();
       setBriefing(data);
     } catch (err) {
-      console.error(err);
+      setError(err instanceof Error ? err.message : "Failed to generate briefing.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }
 
   return (
@@ -80,6 +86,8 @@ export default function RaceEngineerBriefing({
           No strategy briefing generated yet.
         </div>
       )}
+
+      {error && <div className="mt-4 text-red-300">{error}</div>}
 
       {briefing && (
         <div className="space-y-6">

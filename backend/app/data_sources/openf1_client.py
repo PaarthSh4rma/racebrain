@@ -3,6 +3,10 @@ import httpx
 OPENF1_BASE_URL = "https://api.openf1.org/v1"
 
 
+class OpenF1Error(RuntimeError):
+    """Safe application-level error for unavailable upstream race data."""
+
+
 class OpenF1Client:
     def __init__(self):
         self.base_url = OPENF1_BASE_URL
@@ -10,14 +14,12 @@ class OpenF1Client:
     def _get(self, endpoint: str, params: dict | None = None):
         url = f"{self.base_url}/{endpoint}"
 
-        response = httpx.get(
-            url,
-            params=params or {},
-            timeout=20,
-        )
-
-        response.raise_for_status()
-        return response.json()
+        try:
+            response = httpx.get(url, params=params or {}, timeout=20)
+            response.raise_for_status()
+            return response.json()
+        except (httpx.HTTPError, ValueError) as exc:
+            raise OpenF1Error("OpenF1 race data is temporarily unavailable.") from exc
 
     def get_sessions(
         self,

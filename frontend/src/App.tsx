@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Activity, Flag, Gauge, Timer } from "lucide-react";
 import { motion } from "framer-motion";
 import Metric from "./components/Metric";
@@ -6,13 +6,16 @@ import Slider from "./components/Slider";
 import StrategyRanking from "./components/StrategyRanking";
 import RaceEngineerPanel from "./components/ai/RaceEngineerPanel";
 import LiveStrategyPanel from "./components/live/LiveStrategyPanel";
-import { getTrackProfile, runMonteCarloSimulation } from "./api/racebrain";
-import type { SimulationInputs, SimulationResult } from "./types/racebrain";
+import { getTrackProfile, getTrackProfiles, runMonteCarloSimulation } from "./api/racebrain";
+import type { SimulationInputs, SimulationResult, TrackProfile } from "./types/racebrain";
 
 export default function App() {
   const [track, setTrack] = useState("monaco");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SimulationResult | null>(null);
+  const [tracks, setTracks] = useState<TrackProfile[]>([]);
+  const [trackError, setTrackError] = useState<string | null>(null);
+  const [simulationError, setSimulationError] = useState<string | null>(null);
 
   const [inputs, setInputs] = useState<SimulationInputs>({
     total_laps: 20,
@@ -21,51 +24,53 @@ export default function App() {
     simulations: 200,
   });
 
-  const TRACK_OPTIONS = [
-  ["bahrain", "Bahrain"],
-  ["jeddah", "Jeddah"],
-  ["melbourne", "Melbourne"],
-  ["suzuka", "Suzuka"],
-  ["shanghai", "Shanghai"],
-  ["miami", "Miami"],
-  ["imola", "Imola"],
-  ["monaco", "Monaco"],
-  ["montreal", "Montreal"],
-  ["barcelona", "Barcelona"],
-  ["red_bull_ring", "Red Bull Ring"],
-  ["silverstone", "Silverstone"],
-  ["hungaroring", "Hungaroring"],
-  ["spa", "Spa"],
-  ["zandvoort", "Zandvoort"],
-  ["monza", "Monza"],
-  ["baku", "Baku"],
-  ["singapore", "Singapore"],
-  ["austin", "Austin"],
-  ["mexico_city", "Mexico City"],
-  ["interlagos", "Interlagos"],
-  ["las_vegas", "Las Vegas"],
-  ["losail", "Losail"],
-  ["yas_marina", "Yas Marina"],
-] as const;
+  useEffect(() => {
+    async function loadTracks() {
+      try {
+        const profiles = await getTrackProfiles();
+        setTracks(profiles);
+        const initial = profiles.find((profile) => profile.id === "monaco");
+        if (initial) {
+          setInputs((current) => ({
+            ...current,
+            base_lap_time: initial.base_lap_time,
+            pit_loss: initial.pit_loss,
+          }));
+        }
+      } catch (error) {
+        setTrackError(error instanceof Error ? error.message : "Failed to load track profiles.");
+      }
+    }
+    void loadTracks();
+  }, []);
 
   async function handleTrackChange(trackId: string) {
     setTrack(trackId);
+    setTrackError(null);
+    setResult(null);
 
-    const profile = await getTrackProfile(trackId);
-
-    setInputs((current) => ({
-      ...current,
-      base_lap_time: profile.base_lap_time,
-      pit_loss: profile.pit_loss,
-    }));
+    try {
+      const profile = await getTrackProfile(trackId);
+      setInputs((current) => ({
+        ...current,
+        base_lap_time: profile.base_lap_time,
+        pit_loss: profile.pit_loss,
+      }));
+    } catch (error) {
+      setTrackError(error instanceof Error ? error.message : "Failed to load track profile.");
+    }
   }
 
   async function handleRunSimulation() {
     setLoading(true);
+    setSimulationError(null);
+    setResult(null);
 
     try {
       const data = await runMonteCarloSimulation(track, inputs);
       setResult(data);
+    } catch (error) {
+      setSimulationError(error instanceof Error ? error.message : "Failed to run simulation.");
     } finally {
       setLoading(false);
     }
@@ -129,19 +134,20 @@ export default function App() {
                 onChange={(e) => handleTrackChange(e.target.value)}
                 className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm font-bold uppercase tracking-wider text-white outline-none"
               >
-              {TRACK_OPTIONS.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
+              {tracks.map((profile) => (
+                <option key={profile.id} value={profile.id}>
+                  {profile.name}
                 </option>
               ))}
               </select>
+              {trackError && <p className="mt-3 text-sm text-red-300">{trackError}</p>}
             </div>
 
             <div className="mt-8 grid grid-cols-2 gap-4">
               <Slider
                 label="Total Laps"
                 value={inputs.total_laps}
-                min={10}
+                min={16}
                 max={100}
                 step={1}
                 onChange={(v) => setInputs({ ...inputs, total_laps: v })}
@@ -184,6 +190,12 @@ export default function App() {
             >
               {loading ? "Running simulation..." : "Run Strategy Model"}
             </button>
+
+            {simulationError && (
+              <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-red-200">
+                {simulationError}
+              </div>
+            )}
 
             {result && (
               <div className="mt-6 grid grid-cols-4 gap-3">

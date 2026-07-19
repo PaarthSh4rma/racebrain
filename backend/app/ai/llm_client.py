@@ -7,10 +7,18 @@ from openai import OpenAI
 env_path = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=env_path)
 
-client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("OPENROUTER_API_KEY"),
-)
+
+class LLMUnavailableError(RuntimeError):
+    pass
+
+
+def get_llm_client() -> OpenAI:
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        raise LLMUnavailableError(
+            "LLM analysis is unavailable because OPENROUTER_API_KEY is not configured."
+        )
+    return OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
 
 
 def generate_race_engineer_response(
@@ -44,10 +52,10 @@ Your task:
 - Mention risks when relevant
 """
 
-    try:
-        completion = client.chat.completions.create(
-            model="openrouter/free",
-            messages=[
+    client = get_llm_client()
+    completion = client.chat.completions.create(
+        model="openrouter/free",
+        messages=[
                 {
                     "role": "system",
                     "content": (
@@ -69,11 +77,8 @@ Your task:
                     "role": "user",
                     "content": prompt,
                 },
-            ],
-            temperature=0.4,
-        )
+        ],
+        temperature=0.4,
+    )
 
-        return completion.choices[0].message.content
-
-    except Exception as e:
-        return f"LLM generation failed: {str(e)}"
+    return completion.choices[0].message.content

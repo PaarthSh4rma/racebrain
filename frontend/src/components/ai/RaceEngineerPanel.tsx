@@ -58,6 +58,7 @@ export default function RaceEngineerPanel({
   const [aiResponse, setAiResponse] = useState<AiResponse | null>(null);
   const [scenarioResponse, setScenarioResponse] =
     useState<ScenarioResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function sendMessage() {
     if (!result) return;
@@ -65,6 +66,7 @@ export default function RaceEngineerPanel({
     setLoading(true);
     setAiResponse(null);
     setScenarioResponse(null);
+    setError(null);
 
     try {
       if (isScenarioQuestion(message)) {
@@ -86,11 +88,7 @@ export default function RaceEngineerPanel({
 
       setAiResponse(data);
     } catch (error) {
-      setAiResponse({
-        summary: "Race Engineer failed to process that request.",
-        points: [String(error)],
-        tools_used: ["frontend_error_handler"],
-      });
+      setError(error instanceof Error ? error.message : "Race Engineer failed to process that request.");
     } finally {
       setLoading(false);
     }
@@ -139,6 +137,12 @@ export default function RaceEngineerPanel({
     Running analysis pipeline...
   </div>
 )}
+
+          {error && (
+            <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-red-200">
+              {error}
+            </div>
+          )}
 
           {scenarioResponse && 
             <ScenarioResultCard

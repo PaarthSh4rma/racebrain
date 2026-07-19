@@ -29,9 +29,20 @@ export default function LiveStrategyPanel() {
   const [liveStrategy, setLiveStrategy] =
     useState<LiveStrategyResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [driverError, setDriverError] = useState<string | null>(null);
+  const [strategyError, setStrategyError] = useState<string | null>(null);
 
   async function handleSearchSessions() {
     setLoading(true);
+    setSearchError(null);
+    setDriverError(null);
+    setStrategyError(null);
+    setSessions([]);
+    setDrivers([]);
+    setSelectedSessionKey(null);
+    setSelectedDriver(null);
+    setLiveStrategy(null);
 
     try {
       const data = await getSessions({
@@ -42,12 +53,16 @@ export default function LiveStrategyPanel() {
 
       setSessions(data);
       setSelectedSessionKey(data[0]?.session_key ?? null);
-      setLiveStrategy(null);
-
       if (data[0]?.session_key) {
-        const driverData = await getDrivers(data[0].session_key);
-        setDrivers(driverData);
+        try {
+          const driverData = await getDrivers(data[0].session_key);
+          setDrivers(driverData);
+        } catch (error) {
+          setDriverError(error instanceof Error ? error.message : "Failed to load drivers.");
+        }
       }
+    } catch (error) {
+      setSearchError(error instanceof Error ? error.message : "Failed to search sessions.");
     } finally {
       setLoading(false);
     }
@@ -57,6 +72,8 @@ export default function LiveStrategyPanel() {
     if (!selectedSessionKey) return;
 
     setLoading(true);
+    setStrategyError(null);
+    setLiveStrategy(null);
 
     try {
       const data = await getLiveStrategy({
@@ -65,6 +82,26 @@ export default function LiveStrategyPanel() {
       });
 
       setLiveStrategy(data);
+    } catch (error) {
+      setStrategyError(error instanceof Error ? error.message : "Failed to generate strategy.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSelectSession(sessionKey: number) {
+    setSelectedSessionKey(sessionKey);
+    setSelectedDriver(null);
+    setDrivers([]);
+    setDriverError(null);
+    setStrategyError(null);
+    setLiveStrategy(null);
+    setLoading(true);
+
+    try {
+      setDrivers(await getDrivers(sessionKey));
+    } catch (error) {
+      setDriverError(error instanceof Error ? error.message : "Failed to load drivers.");
     } finally {
       setLoading(false);
     }
@@ -98,14 +135,18 @@ export default function LiveStrategyPanel() {
             onYearChange={setYear}
             onCountryChange={setCountryName}
             onSearch={handleSearchSessions}
-            onSelectSession={setSelectedSessionKey}
+            onSelectSession={(sessionKey) => void handleSelectSession(sessionKey)}
           />
+
+          {searchError && <p className="text-sm text-red-300">{searchError}</p>}
 
           <DriverSelect
             drivers={drivers}
             selectedDriver={selectedDriver}
             onSelectDriver={setSelectedDriver}
           />
+
+          {driverError && <p className="text-sm text-red-300">{driverError}</p>}
 
           <button
             onClick={handleLoadStrategy}
@@ -114,6 +155,7 @@ export default function LiveStrategyPanel() {
           >
             {loading ? "Building Race State..." : "Generate Live Strategy Call"}
           </button>
+          {strategyError && <p className="text-sm text-red-300">{strategyError}</p>}
         </div>
 
         <div className="space-y-4">
