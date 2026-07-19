@@ -79,7 +79,7 @@ export default function App() {
   return (
 
     <main className="min-h-screen overflow-x-hidden text-white">
-      <div className="absolute inset-0 opacity-30">
+      <div className="absolute inset-0 overflow-hidden opacity-30">
         <div className="absolute left-[-10%] top-16 h-72 w-72 rounded-full bg-red-600 blur-3xl" />
         <div className="absolute right-[-10%] top-40 h-96 w-96 rounded-full bg-indigo-500 blur-3xl" />
       </div>
