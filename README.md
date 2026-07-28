@@ -29,6 +29,18 @@ Production uses a Vercel-hosted Vite frontend calling a Render-hosted FastAPI se
 
 To try the demo, open the frontend, select a circuit, optionally adjust base lap time or pit loss, and run the strategy model. Historical OpenF1 requests depend on upstream availability. The optional LLM mode is unavailable in this deployment because no OpenRouter key is configured.
 
+## Product tour
+
+| Strategy simulation and ranking | Race Engineer analysis |
+| --- | --- |
+| ![RaceBrain desktop simulation result](docs/screenshots/desktop-strategy-result.jpg) | ![RaceBrain Race Engineer result](docs/screenshots/race-engineer-result.jpg) |
+
+<p align="center">
+  <img src="docs/screenshots/mobile-overview.jpg" alt="RaceBrain mobile layout at 390 pixels wide" width="390">
+</p>
+
+The historical race intelligence flow is also shown in [`docs/screenshots/historical-race-intelligence.jpg`](docs/screenshots/historical-race-intelligence.jpg). OpenF1 data remains dependent on upstream availability.
+
 ## Local setup
 
 Backend (Python 3.11+):
@@ -76,9 +88,12 @@ cd ../frontend
 npm ci
 npm run lint
 npm run build
+npm run test:responsive
 ```
 
 GitHub Actions runs the same backend and frontend checks on pushes and pull requests.
+
+Responsive release verification covers Chrome viewports at 390 × 844, 430 × 932, 768 × 1024, and 1440 × 900. The focused Playwright regression checks the 390px layout for document overflow, core controls, and primary-card containment.
 
 ## Deployment
 
