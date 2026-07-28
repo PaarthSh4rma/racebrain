@@ -101,15 +101,16 @@ def race_engineer_briefing(request: RaceEngineerBriefingRequest):
             "strategy": best["strategy"],
             "strategy_text": format_strategy(best["strategy"]),
             "win_percentage": best["win_percentage"],
+            "preference_percentage": best["preference_percentage"],
             "confidence": monte_carlo_result["confidence"],
             "summary": monte_carlo_result["recommendation"],
         },
         "race_engineer_briefing": {
             "decision": f"Prefer Strategy {best['strategy_id']}",
             "reasoning": [
-                f"Best simulated win rate: {best['win_percentage']}%",
+                f"Fastest in {best['preference_percentage']}% of sampled scenarios",
                 f"Average race time: {best['average_total_time']}s",
-                f"Gap to second-best strategy: {monte_carlo_result['win_gap_to_second']}%",
+                f"Preference gap to second-best: {monte_carlo_result['win_gap_to_second']} points",
                 f"Safety car appeared in {monte_carlo_result['safety_car_simulations']} / {simulations} simulations",
             ],
             "risks": build_risks(monte_carlo_result, profile),

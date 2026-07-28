@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 test("primary experience fits a 390px viewport", async ({ page }) => {
+  await page.route("**/tracks", (route) =>
+    route.fulfill({ json: { tracks: [] } }),
+  );
   await page.goto("/");
 
   await expect(page.getByRole("combobox")).toBeVisible();

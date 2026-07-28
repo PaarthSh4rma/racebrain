@@ -113,6 +113,21 @@ def test_seeded_generation_is_reproducible_and_structured():
     assert {"confidence", "recommendation", "safety_car_rate"} <= data.keys()
 
 
+def test_monte_carlo_preferences_are_not_degenerate_for_monaco():
+    response = client.post(
+        "/monte-carlo/generate",
+        json=generation_payload(simulations=200, seed=42),
+    )
+    assert response.status_code == 200
+    ranked = response.json()["ranked_strategies"]
+    preferences = [item["preference_percentage"] for item in ranked]
+
+    assert 0 < preferences[0] < 100
+    assert sum(value > 0 for value in preferences) > 1
+    assert round(sum(preferences), 6) == 100
+    assert "sampled scenarios" in response.json()["recommendation"]
+
+
 def test_openf1_client_builds_expected_request(monkeypatch):
     class Response:
         def raise_for_status(self):

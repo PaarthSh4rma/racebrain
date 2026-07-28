@@ -1,5 +1,12 @@
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+const isVercelDeployment =
+  typeof window !== "undefined" && window.location.hostname.endsWith(".vercel.app");
+
+// An explicit environment always wins, allowing branch previews to use an
+// isolated backend. Vercel falls back to the same-origin rewrite only when no
+// backend is configured; local development continues to use local FastAPI.
 export const API_URL = (
-  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000"
+  configuredApiUrl || (isVercelDeployment ? "/api" : "http://127.0.0.1:8000")
 ).replace(/\/$/, "");
 
 export async function apiError(response: Response, fallback: string): Promise<Error> {

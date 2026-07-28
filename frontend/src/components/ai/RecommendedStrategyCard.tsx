@@ -22,10 +22,10 @@ export default function RecommendedStrategyCard({
 
         <div className="shrink-0 text-left sm:text-right">
           <p className="text-3xl font-black text-red-400">
-            {best.win_percentage}%
+            {best.preference_percentage}%
           </p>
           <p className="text-xs uppercase tracking-[0.2em] text-white/40">
-            win rate
+            scenario preference
           </p>
         </div>
       </div>
@@ -36,7 +36,7 @@ export default function RecommendedStrategyCard({
         </span>
 
         <span className="rounded-full bg-white/10 px-3 py-1 text-sm">
-          Gap: {result.win_gap_to_second}%
+          Preference gap: {result.win_gap_to_second} pts
         </span>
 
         <span className="rounded-full bg-white/10 px-3 py-1 text-sm">

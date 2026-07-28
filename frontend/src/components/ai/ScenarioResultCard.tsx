@@ -55,7 +55,7 @@ export default function ScenarioResultCard({
             Strategy {scenario.comparison.original_strategy}
           </p>
           <p className="mt-2 text-white/70">
-            {scenario.comparison.original_win_rate}% win rate
+            {scenario.comparison.original_win_rate}% scenario preference
           </p>
         
         </div>
@@ -74,7 +74,7 @@ export default function ScenarioResultCard({
             )}
           </div>
           <p className="mt-2 text-white/70">
-            {scenario.comparison.new_win_rate}% win rate
+            {scenario.comparison.new_win_rate}% scenario preference
           </p>
 
         </div>
@@ -88,7 +88,7 @@ export default function ScenarioResultCard({
 
     <p className="mt-2 text-2xl font-black">
       {scenario.comparison.win_rate_delta > 0 ? "+" : ""}
-      {scenario.comparison.win_rate_delta}% win rate
+      {scenario.comparison.win_rate_delta} preference points
     </p>
 
     <p className="mt-2 text-white/50">

@@ -51,11 +51,11 @@ def build_key_factors(result: dict) -> list[str]:
     best = result["best_strategy"]
 
     factors.append(
-        f"Strategy {best['strategy_id']} has the highest simulated win rate at {best['win_percentage']}%."
+        f"Strategy {best['strategy_id']} was fastest most often, in {best.get('preference_percentage', best['win_percentage'])}% of sampled scenarios."
     )
 
     factors.append(
-        f"The win gap to the second-best strategy is {result['win_gap_to_second']}%."
+        f"The preference gap to the second-best strategy is {result['win_gap_to_second']} percentage points."
     )
 
     if result["confidence"] == "low":
@@ -85,7 +85,7 @@ def build_tradeoffs(result: dict) -> list[str]:
     second = ranked[1]
 
     return [
-        f"Strategy {best['strategy_id']} has the best win rate, but Strategy {second['strategy_id']} is close behind at {second['win_percentage']}%.",
+        f"Strategy {best['strategy_id']} has the highest scenario preference, but Strategy {second['strategy_id']} is close behind at {second.get('preference_percentage', second['win_percentage'])}%.",
         "Because the top strategies are clustered, the call should stay flexible rather than locked in too early.",
         "A safety car or traffic change could easily flip the preferred option.",
     ]
@@ -158,7 +158,7 @@ def explain_strategy(request: ExplainRequest):
     return {
         "summary": (
             f"Strategy {best['strategy_id']} is preferred with a "
-            f"{best['win_percentage']}% simulated win rate, but this is a "
+            f"{best.get('preference_percentage', best['win_percentage'])}% scenario preference, but this is a "
             f"{recommendation_type} recommendation."
         ),
         "recommendation_type": recommendation_type,

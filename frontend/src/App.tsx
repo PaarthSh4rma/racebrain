@@ -5,7 +5,7 @@ import Metric from "./components/Metric";
 import Slider from "./components/Slider";
 import StrategyRanking from "./components/StrategyRanking";
 import RaceEngineerPanel from "./components/ai/RaceEngineerPanel";
-import LiveStrategyPanel from "./components/live/LiveStrategyPanel";
+import ReplayPanel from "./components/replay/ReplayPanel";
 import { getTrackProfile, getTrackProfiles, runMonteCarloSimulation } from "./api/racebrain";
 import type { SimulationInputs, SimulationResult, TrackProfile } from "./types/racebrain";
 
@@ -126,7 +126,7 @@ export default function App() {
 
             <p className="mt-6 text-lg leading-8 text-white/60">
               Monte Carlo strategy simulation with tyre degradation, pit loss
-              variance, candidate filtering, and win probability ranking.
+              variance, candidate filtering, and scenario-preference ranking.
             </p>
 
             <div className="mt-6">
@@ -244,7 +244,7 @@ export default function App() {
             </motion.div>
         </section>
 
-          <LiveStrategyPanel />
+          <ReplayPanel />
         </motion.div>
       </div>
     </main>

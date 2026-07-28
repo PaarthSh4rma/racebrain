@@ -18,7 +18,7 @@ def confidence_analysis(result: dict) -> dict:
 
     if gap < 2:
         reasons.append(
-            f"The win gap to second-best is only {gap}%, so the model does not have a clear winner."
+            f"The preference gap to second-best is only {gap} points, so the model does not have a clear leader."
         )
 
     if safety_car_rate > 0.25:
@@ -57,9 +57,9 @@ def compare_top_two(result: dict) -> dict:
             f"but the gap is narrow."
         ),
         "points": [
-            f"Strategy {first['strategy_id']}: {format_strategy(first['strategy'])}, {first['win_percentage']}% win rate.",
-            f"Strategy {second['strategy_id']}: {format_strategy(second['strategy'])}, {second['win_percentage']}% win rate.",
-            f"Gap: {first['win_percentage'] - second['win_percentage']:.1f} percentage points.",
+            f"Strategy {first['strategy_id']}: {format_strategy(first['strategy'])}, {first.get('preference_percentage', first['win_percentage'])}% scenario preference.",
+            f"Strategy {second['strategy_id']}: {format_strategy(second['strategy'])}, {second.get('preference_percentage', second['win_percentage'])}% scenario preference.",
+            f"Gap: {first.get('preference_percentage', first['win_percentage']) - second.get('preference_percentage', second['win_percentage']):.1f} percentage points.",
             "Because the gap is small, the second strategy remains viable if traffic, tyre degradation, or safety car timing changes.",
         ],
     }
@@ -84,7 +84,7 @@ def risk_analysis(result: dict) -> dict:
             f"Lowest standard deviation among top candidates: {safest.get('std_dev')}s.",
             f"Strategy: {format_strategy(safest['strategy'])}.",
             "Lower variance usually means the strategy is less exposed to extreme race outcomes.",
-            "This may not maximise win probability, but it can be safer when confidence is low.",
+            "This may not maximise scenario preference, but it can be safer when confidence is low.",
         ],
     }
 
