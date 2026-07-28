@@ -5,7 +5,7 @@ import Metric from "./components/Metric";
 import Slider from "./components/Slider";
 import StrategyRanking from "./components/StrategyRanking";
 import RaceEngineerPanel from "./components/ai/RaceEngineerPanel";
-import LiveStrategyPanel from "./components/live/LiveStrategyPanel";
+import ReplayPanel from "./components/replay/ReplayPanel";
 import { getTrackProfile, getTrackProfiles, runMonteCarloSimulation } from "./api/racebrain";
 import type { SimulationInputs, SimulationResult, TrackProfile } from "./types/racebrain";
 
@@ -244,7 +244,7 @@ export default function App() {
             </motion.div>
         </section>
 
-          <LiveStrategyPanel />
+          <ReplayPanel />
         </motion.div>
       </div>
     </main>

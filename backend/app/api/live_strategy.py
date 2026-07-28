@@ -4,10 +4,17 @@ from app.data_sources.openf1_client import OpenF1Error
 from app.services.race_state_builder import build_race_state
 from app.services.live_strategy_service import generate_live_strategy_call
 
-router = APIRouter(prefix="/live-strategy", tags=["Live Strategy"])
+router = APIRouter(
+    prefix="/live-strategy",
+    tags=["Legacy Historical Strategy (Deprecated)"],
+)
 
 
-@router.get("/session/{session_key}")
+@router.get(
+    "/session/{session_key}",
+    deprecated=True,
+    summary="Legacy full-session historical strategy (not live)",
+)
 def get_live_strategy_call(
     session_key: int,
     driver_number: int | None = Query(default=None),

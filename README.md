@@ -1,6 +1,6 @@
 # RaceBrain
 
-RaceBrain is a React and FastAPI portfolio project for comparing simplified Formula 1 tyre strategies. It combines deterministic race-time estimates, Monte Carlo ranking, grounded strategy explanations, and historical race context from OpenF1.
+RaceBrain is a React and FastAPI portfolio project for comparing simplified Formula 1 tyre strategies and replaying historical decisions without future-race hindsight. It combines deterministic race-time estimates, Monte Carlo ranking, grounded strategy explanations, and lap-bounded historical context from OpenF1.
 
 The model is an educational strategy simulator, not a validated physics model or a live pit-wall system. OpenF1 views query available upstream session data; their freshness depends on OpenF1 and this application does not ingest car telemetry continuously.
 
@@ -14,7 +14,9 @@ React + TypeScript + Vite
 FastAPI
   |-- track profiles and simulation engines
   |-- deterministic and optional OpenRouter explanations
-  `-- OpenF1 HTTP client and historical race-state summaries
+  |-- cached OpenF1 boundary with controlled transient retries
+  |-- lap-bounded historical replay reconstruction
+  `-- deterministic replay recommendation and alternative scoring
 ```
 
 Circuit metadata is owned by the backend and exposed through `GET /tracks`. The frontend loads those profiles and can override base lap time and pit loss per simulation request. Monte Carlo requests may include a seed for reproducible comparisons; ordinary requests remain unseeded.
@@ -27,7 +29,17 @@ Production uses a Vercel-hosted Vite frontend calling a Render-hosted FastAPI se
 - Backend: https://racebrain-api.onrender.com
 - API documentation: https://racebrain-api.onrender.com/docs
 
-To try the demo, open the frontend, select a circuit, optionally adjust base lap time or pit loss, and run the strategy model. Historical OpenF1 requests depend on upstream availability. The optional LLM mode is unavailable in this deployment because no OpenRouter key is configured.
+To try the deployed Milestone 1 demo, open the frontend, select a circuit, optionally adjust base lap time or pit loss, and run the strategy model. The Milestone 2 historical replay is implemented and validated locally but is not deployed yet. Historical OpenF1 requests depend on upstream availability. The optional LLM mode is unavailable in this deployment because no OpenRouter key is configured.
+
+## Historical Decision Replay
+
+The replay flow guides a user through race search, session selection, driver selection, and a completed decision lap. It reconstructs only the information available at that moment, then presents a deterministic recommendation and three alternatives scored under the same sampled conditions.
+
+Hindsight prevention is enforced at the service boundary: laps and lap-numbered events after the selected lap are excluded, timestamped weather and race-control records are cut off at that lap's completion time, session-end metadata is removed, and stints are truncated rather than revealing later pit stops. Responses include record counts, ignored-future counts, cutoff provenance, cache metadata, and honest warnings for incomplete upstream data. The full implementation note is in [`docs/milestone-2-replay-implementation.md`](docs/milestone-2-replay-implementation.md).
+
+Automated replay tests use five deterministic, timestamped fixtures—dry, safety-car, changing-weather, incomplete-data, and multiple-stint races—so validation never depends on live OpenF1 availability. Recommendations remain educational outputs from a deliberately simplified model.
+
+Replay screenshots are intentionally pending until the feature is captured from a real browser after deployment.
 
 ## Product tour
 
@@ -39,7 +51,7 @@ To try the demo, open the frontend, select a circuit, optionally adjust base lap
   <img src="docs/screenshots/mobile-overview.jpg" alt="RaceBrain mobile layout at 390 pixels wide" width="390">
 </p>
 
-The historical race intelligence flow is also shown in [`docs/screenshots/historical-race-intelligence.jpg`](docs/screenshots/historical-race-intelligence.jpg). OpenF1 data remains dependent on upstream availability.
+The images above document the released Milestone 1 experience. Milestone 2 replay screenshots remain pending until a real deployed browser capture is available.
 
 ## Local setup
 
@@ -88,7 +100,7 @@ cd ../frontend
 npm ci
 npm run lint
 npm run build
-npm run test:responsive
+npm run test:browser
 ```
 
 GitHub Actions runs the same backend and frontend checks on pushes and pull requests.
@@ -116,11 +128,12 @@ Production environment-variable names are `CORS_ALLOWED_ORIGINS` and optional `O
 - Preserves 24 built-in circuit profiles and rejects unsupported identifiers.
 - Compares generated one-stop and two-stop strategies with a simplified tyre-degradation model.
 - Uses common sampled lap, pit, and safety-car conditions across strategies within each seeded race comparison.
-- Reads historical or upstream-available OpenF1 sessions, drivers, laps, stints, weather, and race-control messages.
-- Produces heuristic strategy calls from that race state; it does not operate a live timing feed or guarantee real-time decisions.
+- Reconstructs a driver's historical state at a selected completed lap and excludes future laps, weather, race-control messages, and pit-stop knowledge.
+- Produces deterministic replay recommendations plus transparent alternative scores under shared sampled conditions; these scores are not win probabilities.
+- Caches repeated OpenF1 reads in bounded per-process memory with endpoint-specific expiry and retries only transient failures.
 - LLM explanations are constrained by supplied simulation data but still depend on an external model provider.
 - The free Render service can spin down when idle, so the first API request after inactivity may take noticeably longer.
-- There is no authentication, database, persistent telemetry pipeline, historical replay UI, or production monitoring yet.
+- There is no authentication, database, persistent telemetry pipeline, live timing operation, or production monitoring yet.
 
 ## Main endpoints
 
@@ -129,8 +142,9 @@ Production environment-variable names are `CORS_ALLOWED_ORIGINS` and optional `O
 - `POST /monte-carlo/generate`
 - `POST /race-engineer/briefing`
 - `POST /ai/explain`, `POST /ai/llm-explain`, and `POST /ai/scenario`
-- `GET /race-data/sessions` and related OpenF1 endpoints
-- `GET /live-strategy/session/{session_key}`
+- `GET /replay/sessions`, session drivers, and available decision laps
+- `POST /replay/snapshot`, `/replay/recommendation`, `/replay/alternatives`, and `/replay/assessment`
+- Legacy `/race-data` and `/live-strategy` routes remain for compatibility but are not used by the replay UI.
 
 ## Disclaimer
 

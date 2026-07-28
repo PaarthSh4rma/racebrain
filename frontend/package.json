@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test:responsive": "playwright test",
+    "test:browser": "playwright test",
+    "test:responsive": "playwright test tests/responsive.spec.ts",
     "preview": "vite preview"
   },
   "dependencies": {
