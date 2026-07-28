@@ -49,10 +49,10 @@ export default function AiResponseCard({
       </div>
 
       {(response.recommendation_type || response.risk_level) && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {response.recommendation_type && (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <p className="text-sm uppercase tracking-[0.2em] text-white/40">
+              <p className="break-words text-xs uppercase tracking-[0.15em] text-white/40 sm:text-sm sm:tracking-[0.2em]">
                 Recommendation
               </p>
               <p className="mt-2 text-xl font-black capitalize">

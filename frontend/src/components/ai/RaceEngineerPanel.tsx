@@ -58,6 +58,7 @@ export default function RaceEngineerPanel({
   const [aiResponse, setAiResponse] = useState<AiResponse | null>(null);
   const [scenarioResponse, setScenarioResponse] =
     useState<ScenarioResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function sendMessage() {
     if (!result) return;
@@ -65,6 +66,7 @@ export default function RaceEngineerPanel({
     setLoading(true);
     setAiResponse(null);
     setScenarioResponse(null);
+    setError(null);
 
     try {
       if (isScenarioQuestion(message)) {
@@ -86,18 +88,17 @@ export default function RaceEngineerPanel({
 
       setAiResponse(data);
     } catch (error) {
-      setAiResponse({
-        summary: "Race Engineer failed to process that request.",
-        points: [String(error)],
-        tools_used: ["frontend_error_handler"],
-      });
+      setError(error instanceof Error ? error.message : "Race Engineer failed to process that request.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-w-0 rounded-[2rem] border border-white/10 bg-black/40 p-6 backdrop-blur-xl">
+    <div
+      data-testid="race-engineer-card"
+      className="min-w-0 rounded-[2rem] border border-white/10 bg-black/40 p-4 backdrop-blur-xl sm:p-6"
+    >
       <p className="text-xs uppercase tracking-[0.35em] text-cyan-400">
         Race Engineer AI
       </p>
@@ -129,7 +130,7 @@ export default function RaceEngineerPanel({
           <button
             onClick={sendMessage}
             disabled={loading}
-            className="mt-4 rounded-2xl bg-cyan-500 px-6 py-3 font-black text-black transition hover:scale-[1.02] disabled:opacity-50"
+            className="mt-4 w-full rounded-2xl bg-cyan-500 px-5 py-3 font-black text-black transition hover:scale-[1.02] disabled:opacity-50 sm:w-auto sm:px-6"
           >
             {loading ? "Race Engineer analysing..." : "Ask Race Engineer"}
           </button>
@@ -139,6 +140,12 @@ export default function RaceEngineerPanel({
     Running analysis pipeline...
   </div>
 )}
+
+          {error && (
+            <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-red-200">
+              {error}
+            </div>
+          )}
 
           {scenarioResponse && 
             <ScenarioResultCard

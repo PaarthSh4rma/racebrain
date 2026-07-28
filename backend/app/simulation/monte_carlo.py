@@ -87,9 +87,9 @@ def calculate_win_probabilities(
     pit_variance: float = 1.5,
     degradation_multiplier: float = 1.0,
     safety_car_probability: float = 0.0,
+    seed: int | None = None,
 ) -> dict:
-    import random
-    from statistics import mean, stdev
+    rng = random.Random(seed)
 
     win_counts = {index + 1: 0 for index in range(len(strategies))}
     total_times_by_strategy = {index + 1: [] for index in range(len(strategies))}
@@ -98,18 +98,18 @@ def calculate_win_probabilities(
     for _ in range(simulations):
         race_results = []
 
-        safety_car_deployed = random.random() < safety_car_probability
+        safety_car_deployed = rng.random() < safety_car_probability
 
         if safety_car_deployed:
             safety_car_count += 1
 
-        for index, strategy in enumerate(strategies):
-            if safety_car_deployed:
-                simulated_pit_loss = max(8.0, random.gauss(pit_loss * 0.55, pit_variance))
-            else:
-                simulated_pit_loss = max(15.0, random.gauss(pit_loss, pit_variance))
+        simulated_base_lap = rng.gauss(base_lap_time, lap_variance)
+        if safety_car_deployed:
+            simulated_pit_loss = max(8.0, rng.gauss(pit_loss * 0.55, pit_variance))
+        else:
+            simulated_pit_loss = max(15.0, rng.gauss(pit_loss, pit_variance))
 
-            simulated_base_lap = random.gauss(base_lap_time, lap_variance)
+        for index, strategy in enumerate(strategies):
 
             result = simulate_race(
                 base_lap_time=simulated_base_lap,
@@ -188,6 +188,7 @@ def calculate_win_probabilities(
     )
 
     return {
+        "seed": seed,
         "best_strategy": top_strategy,
         "confidence": confidence,
         "win_gap_to_second": round(win_gap, 2),

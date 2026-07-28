@@ -32,14 +32,14 @@ export default function SessionSearch({
           type="number"
           value={year}
           onChange={(event) => onYearChange(Number(event.target.value))}
-          className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none"
+          className="min-w-0 rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none"
         />
 
         <input
           value={countryName}
           onChange={(event) => onCountryChange(event.target.value)}
           placeholder="Monaco"
-          className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none"
+          className="min-w-0 rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none"
         />
 
         <button
@@ -67,7 +67,7 @@ export default function SessionSearch({
                 {session.year} {session.country_name} GP —{" "}
                 {session.session_name}
               </p>
-              <p className="mt-1 text-sm text-white/50">
+              <p className="mt-1 break-words text-sm text-white/50">
                 {session.circuit_short_name} · Session Key{" "}
                 {session.session_key}
               </p>

@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.ai.analysis_tools import (
@@ -7,7 +7,7 @@ from app.ai.analysis_tools import (
     confidence_analysis,
     risk_analysis,
 )
-from app.ai.llm_client import generate_race_engineer_response
+from app.ai.llm_client import LLMUnavailableError, generate_race_engineer_response
 
 router = APIRouter(prefix="/ai", tags=["AI"])
 
@@ -53,11 +53,19 @@ def llm_explain(request: LLMExplainRequest):
         request.simulation_result,
     )
 
-    response = generate_race_engineer_response(
-        question=request.question,
-        simulation_result=request.simulation_result,
-        analysis=analysis,
-    )
+    try:
+        response = generate_race_engineer_response(
+            question=request.question,
+            simulation_result=request.simulation_result,
+            analysis=analysis,
+        )
+    except LLMUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="The LLM provider could not complete the request.",
+        ) from exc
 
     return {
         "response": response,

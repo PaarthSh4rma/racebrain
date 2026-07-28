@@ -34,9 +34,11 @@ export type SimulationResult = {
   safety_car_probability: number;
   safety_car_simulations: number;
   safety_car_rate: number;
+  seed: number | null;
 };
 
 export type TrackProfile = {
+  id: string;
   name: string;
   base_lap_time: number;
   pit_loss: number;

@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
 
 from app.data.track_profiles import get_track_profile
@@ -60,6 +60,8 @@ def race_engineer_briefing(request: RaceEngineerBriefingRequest):
     simulations = min(request.simulations, MAX_SIMULATIONS)
 
     profile = get_track_profile(request.track)
+    if profile is None:
+        raise HTTPException(status_code=404, detail=f"Unsupported track: {request.track}")
 
     all_strategies = generate_strategies(
         total_laps=request.total_laps,

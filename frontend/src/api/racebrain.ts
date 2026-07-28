@@ -3,14 +3,20 @@ import type {
   SimulationResult,
   TrackProfile,
 } from "../types/racebrain";
+import { API_URL, apiError } from "./config";
 
-const API_URL = "http://127.0.0.1:8000";
+export async function getTrackProfiles(): Promise<TrackProfile[]> {
+  const response = await fetch(`${API_URL}/tracks`);
+  if (!response.ok) throw await apiError(response, "Failed to load track profiles.");
+  const data = (await response.json()) as { tracks: TrackProfile[] };
+  return data.tracks;
+}
 
 export async function getTrackProfile(trackId: string): Promise<TrackProfile> {
   const response = await fetch(`${API_URL}/tracks/${trackId}`);
 
   if (!response.ok) {
-    throw new Error("Failed to load track profile");
+    throw await apiError(response, "Failed to load track profile.");
   }
 
   return response.json();
@@ -29,6 +35,8 @@ export async function runMonteCarloSimulation(
       track,
       total_laps: inputs.total_laps,
       simulations: inputs.simulations,
+      base_lap_time: inputs.base_lap_time,
+      pit_loss: inputs.pit_loss,
       lap_variance: 0.35,
       pit_variance: 1.5,
         include_one_stop: true,
@@ -37,7 +45,7 @@ export async function runMonteCarloSimulation(
   });
 
   if (!response.ok) {
-    throw new Error("Failed to run simulation");
+    throw await apiError(response, "Failed to run simulation.");
   }
 
   return response.json();

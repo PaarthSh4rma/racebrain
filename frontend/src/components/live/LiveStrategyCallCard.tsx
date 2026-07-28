@@ -13,13 +13,13 @@ export default function LiveStrategyCallCard({
         Live Strategy Call
       </p>
 
-      <h3 className="mt-3 text-3xl font-black capitalize text-white">
+      <h3 className="mt-3 break-words text-2xl font-black capitalize text-white sm:text-3xl">
         {call.recommendation.replaceAll("_", " ")}
       </h3>
 
       <p className="mt-3 text-white/75">{call.call}</p>
 
-      <div className="mt-5 grid grid-cols-2 gap-3">
+      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-xl bg-black/30 p-3">
           <p className="text-xs uppercase tracking-[0.2em] text-white/40">
             Tyre Risk

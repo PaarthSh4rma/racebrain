@@ -11,6 +11,8 @@ def run_strategy_simulation(
     adjustments: dict | None = None,
 ):
     profile = get_track_profile(track)
+    if profile is None:
+        raise ValueError(f"Unsupported track: {track}")
     adjustments = adjustments or {}
 
     profile = {

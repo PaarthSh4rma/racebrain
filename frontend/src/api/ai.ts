@@ -1,7 +1,6 @@
 import type { SimulationResult } from "../types/racebrain";
 import type { AiResponse, ScenarioResponse } from "../types/ai";
-
-const API_URL = "http://127.0.0.1:8000";
+import { API_URL, apiError } from "./config";
 
 export async function explainSimulation(
   message: string,
@@ -16,7 +15,7 @@ export async function explainSimulation(
     }),
   });
 
-  if (!response.ok) throw new Error("Failed to explain simulation");
+  if (!response.ok) throw await apiError(response, "Failed to explain simulation.");
 
   return response.json();
 }
@@ -34,7 +33,7 @@ export async function explainSimulationWithLlm(
     }),
   });
 
-  if (!response.ok) throw new Error("Failed to generate LLM explanation");
+  if (!response.ok) throw await apiError(response, "Failed to generate LLM explanation.");
 
   return response.json();
 }
@@ -64,7 +63,7 @@ export async function runScenarioSimulation({
     }),
   });
 
-  if (!response.ok) throw new Error("Failed to run scenario simulation");
+  if (!response.ok) throw await apiError(response, "Failed to run scenario simulation.");
 
   return response.json();
 }

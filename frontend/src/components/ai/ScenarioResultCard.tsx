@@ -46,12 +46,12 @@ export default function ScenarioResultCard({
   </div>
 )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
           <p className="text-sm uppercase tracking-[0.2em] text-white/40">
             Original
           </p>
-          <p className="mt-2 text-3xl font-black">
+          <p className="mt-2 break-words text-2xl font-black sm:text-3xl">
             Strategy {scenario.comparison.original_strategy}
           </p>
           <p className="mt-2 text-white/70">
@@ -65,14 +65,14 @@ export default function ScenarioResultCard({
           <p className="text-sm uppercase tracking-[0.2em] text-cyan-400">
             Scenario Result
           </p>
-          <p className="mt-2 text-3xl font-black">
+          <div className="mt-2 break-words text-2xl font-black sm:text-3xl">
             Strategy {scenario.comparison.new_strategy}
             {scenario.modified_result?.best_strategy?.strategy && (
-            <p className="mt-2 text-sm text-white/50">
-              {formatStrategy(scenario.modified_result.best_strategy.strategy)}
-            </p>
-          )}
-          </p>
+              <p className="mt-2 text-sm font-normal text-white/50">
+                {formatStrategy(scenario.modified_result.best_strategy.strategy)}
+              </p>
+            )}
+          </div>
           <p className="mt-2 text-white/70">
             {scenario.comparison.new_win_rate}% win rate
           </p>

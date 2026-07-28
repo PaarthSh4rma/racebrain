@@ -1,266 +1,137 @@
-# RaceBrain 🏎️🧠
+# RaceBrain
 
-AI-powered Formula 1 strategy intelligence platform combining Monte Carlo simulation, semantic scenario analysis, and grounded AI race engineering.
+RaceBrain is a React and FastAPI portfolio project for comparing simplified Formula 1 tyre strategies. It combines deterministic race-time estimates, Monte Carlo ranking, grounded strategy explanations, and historical race context from OpenF1.
 
----
-
-## Overview
-
-RaceBrain is an AI-assisted motorsport strategy platform designed to simulate and analyse Formula 1 race strategy decisions under uncertain race conditions.
-
-The system combines:
-
-* probabilistic Monte Carlo race simulation
-* tyre degradation modelling
-* safety car variability
-* semantic AI scenario parsing
-* deterministic race analysis tools
-* grounded LLM-powered engineering explanations
-
-Rather than functioning as a simple chatbot wrapper, RaceBrain behaves like an AI race engineer capable of:
-
-* evaluating strategies
-* rerunning simulations under modified conditions
-* comparing outcomes
-* generating contingency guidance
-* reasoning about race scenarios
-
----
-
-## Features
-
-### Monte Carlo Strategy Simulation
-
-* Generates and evaluates race strategies
-* Simulates:
-
-  * tyre degradation
-  * pit stop losses
-  * race variance
-  * safety car probability
-* Calculates:
-
-  * win probability
-  * confidence levels
-  * average race time
-  * strategy rankings
-
----
-
-### AI Race Engineer
-
-RaceBrain includes a hybrid AI reasoning layer capable of:
-
-* deterministic strategy analysis
-* grounded LLM explanations
-* semantic scenario interpretation
-* contingency generation
-
-Example prompts:
-
-```txt
-Why is this strategy best?
-```
-
-```txt
-What if degradation increases by 20%?
-```
-
-```txt
-What if it rains?
-```
-
-```txt
-What if Ferrari is the pit crew?
-```
-
----
-
-### Semantic Scenario Engine
-
-RaceBrain can convert natural language race scenarios into structured simulation adjustments.
-
-Examples:
-
-| User Scenario                      | Simulation Mutation                                   |
-| ---------------------------------- | ----------------------------------------------------- |
-| "What if it rains?"                | Increased degradation + higher safety car probability |
-| "What if degradation rises?"       | Tyre wear multiplier increase                         |
-| "What if safety cars increase?"    | Increased safety car likelihood                       |
-| "What if Ferrari is the pit crew?" | Increased pit stop variance (We are checking😭)        |
-
-The system then:
-
-1. mutates race assumptions
-2. reruns Monte Carlo simulation
-3. compares outcomes
-4. generates contingency guidance
-
----
+The model is an educational strategy simulator, not a validated physics model or a live pit-wall system. OpenF1 views query available upstream session data; their freshness depends on OpenF1 and this application does not ingest car telemetry continuously.
 
 ## Architecture
 
 ```text
-Frontend (React + Tailwind)
-        ↓
-FastAPI Backend
-        ↓
-AI Orchestration Layer
- ├── Deterministic Analysis Tools
- ├── Semantic Scenario Parser
- ├── Monte Carlo Simulation Engine
- └── Grounded LLM Reasoning
-        ↓
-Strategy Recommendations
+React + TypeScript + Vite
+        |
+        | HTTP (VITE_API_URL)
+        v
+FastAPI
+  |-- track profiles and simulation engines
+  |-- deterministic and optional OpenRouter explanations
+  `-- OpenF1 HTTP client and historical race-state summaries
 ```
 
----
+Circuit metadata is owned by the backend and exposed through `GET /tracks`. The frontend loads those profiles and can override base lap time and pit loss per simulation request. Monte Carlo requests may include a seed for reproducible comparisons; ordinary requests remain unseeded.
 
-## Tech Stack
+Production uses a Vercel-hosted Vite frontend calling a Render-hosted FastAPI service over HTTPS. Neither deployment includes a database or persistent application storage.
 
-### Frontend
+## Live deployment
 
-* React
-* TypeScript
-* Tailwind CSS
-* Vite
+- Frontend: https://racebrain-mauve.vercel.app
+- Backend: https://racebrain-api.onrender.com
+- API documentation: https://racebrain-api.onrender.com/docs
 
-### Backend
+To try the demo, open the frontend, select a circuit, optionally adjust base lap time or pit loss, and run the strategy model. Historical OpenF1 requests depend on upstream availability. The optional LLM mode is unavailable in this deployment because no OpenRouter key is configured.
 
-* FastAPI
-* Python
-* Pydantic
+## Product tour
 
-### AI / Simulation
+| Strategy simulation and ranking | Race Engineer analysis |
+| --- | --- |
+| ![RaceBrain desktop simulation result](docs/screenshots/desktop-strategy-result.jpg) | ![RaceBrain Race Engineer result](docs/screenshots/race-engineer-result.jpg) |
 
-* Monte Carlo simulation
-* Semantic scenario parsing
-* OpenRouter LLM integration
-* Deterministic analysis tooling
+<p align="center">
+  <img src="docs/screenshots/mobile-overview.jpg" alt="RaceBrain mobile layout at 390 pixels wide" width="390">
+</p>
 
----
+The historical race intelligence flow is also shown in [`docs/screenshots/historical-race-intelligence.jpg`](docs/screenshots/historical-race-intelligence.jpg). OpenF1 data remains dependent on upstream availability.
 
-## AI Engineering Concepts Demonstrated
+## Local setup
 
-RaceBrain was built to explore real-world AI systems engineering concepts including:
-
-* probabilistic simulation
-* deterministic AI tooling
-* grounded LLM reasoning
-* semantic parsing
-* orchestration pipelines
-* tool routing
-* scenario mutation
-* agentic multi-step workflows
-* simulation comparison systems
-
----
-
-## Running Locally
-
-### Backend
+Backend (Python 3.11+):
 
 ```bash
 cd backend
-
-pip install -r requirements.txt
-
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+cp .env.example .env
 uvicorn app.main:app --reload
 ```
 
-Backend runs on:
+The OpenRouter key is optional. Without it, the API starts normally and returns `503` only for LLM-backed explanation requests.
 
-```txt
-http://127.0.0.1:8000
-```
-
----
-
-### Frontend
+Frontend (Node 24 recommended):
 
 ```bash
 cd frontend
-
-npm install
-
+npm ci
+cp .env.example .env.local
 npm run dev
 ```
 
-Frontend runs on:
+Defaults: API `http://127.0.0.1:8000`, frontend `http://localhost:5173`.
 
-```txt
-http://localhost:5173
+## Environment variables
+
+| Location | Variable | Required | Purpose |
+| --- | --- | --- | --- |
+| Backend | `CORS_ALLOWED_ORIGINS` | Production | Comma-separated explicit frontend origins |
+| Backend | `OPENROUTER_API_KEY` | No | Enables OpenRouter-backed explanations |
+| Frontend | `VITE_API_URL` | Production | Public URL of the FastAPI service |
+
+Never put a secret in a `VITE_` variable; Vite embeds those values in browser assets.
+
+## Validation
+
+```bash
+cd backend
+pytest
+python -c "from app.main import app; print(app.title)"
+
+cd ../frontend
+npm ci
+npm run lint
+npm run build
+npm run test:responsive
 ```
 
----
+GitHub Actions runs the same backend and frontend checks on pushes and pull requests.
 
-## API Endpoints
+Responsive release verification covers Chrome viewports at 390 × 844, 430 × 932, 768 × 1024, and 1440 × 900. The focused Playwright regression checks the 390px layout for document overflow, core controls, and primary-card containment.
 
-### Strategy Simulation
+## Deployment
 
-```http
-POST /race-engineer/briefing
-```
+### Render backend
 
-### Deterministic AI Analysis
+The backend is deployed from `render.yaml` on Render's free web-service plan. Set `CORS_ALLOWED_ORIGINS` to the exact Vercel origin and optionally set `OPENROUTER_API_KEY`. The configured health check is `/health`.
 
-```http
-POST /ai/explain
-```
+Production URL: https://racebrain-api.onrender.com
 
-### Grounded LLM Analysis
+### Vercel frontend
 
-```http
-POST /ai/llm-explain
-```
+Import the repository, set the project root to `frontend`, and set `VITE_API_URL` to the Render backend URL. `frontend/vercel.json` declares the Vite build and output directory.
 
-### Scenario Mutation + Rerun
+Production URL: https://racebrain-mauve.vercel.app
 
-```http
-POST /ai/scenario
-```
+Production environment-variable names are `CORS_ALLOWED_ORIGINS` and optional `OPENROUTER_API_KEY` on Render, plus `VITE_API_URL` on Vercel. Values should be configured in the hosting dashboards and never committed.
 
----
+## Current capabilities and limitations
 
-## Example Scenario Flow
+- Preserves 24 built-in circuit profiles and rejects unsupported identifiers.
+- Compares generated one-stop and two-stop strategies with a simplified tyre-degradation model.
+- Uses common sampled lap, pit, and safety-car conditions across strategies within each seeded race comparison.
+- Reads historical or upstream-available OpenF1 sessions, drivers, laps, stints, weather, and race-control messages.
+- Produces heuristic strategy calls from that race state; it does not operate a live timing feed or guarantee real-time decisions.
+- LLM explanations are constrained by supplied simulation data but still depend on an external model provider.
+- The free Render service can spin down when idle, so the first API request after inactivity may take noticeably longer.
+- There is no authentication, database, persistent telemetry pipeline, historical replay UI, or production monitoring yet.
 
-```txt
-User:
-"What if degradation rises and safety cars increase?"
-```
+## Main endpoints
 
-RaceBrain:
-
-1. Parses semantic race conditions
-2. Applies simulation mutations
-3. Reruns Monte Carlo strategy engine
-4. Compares original vs modified results
-5. Generates contingency guidance
-
----
-
-## Future Improvements
-
-### V3 Roadmap
-
-* FastF1 / OpenF1 telemetry ingestion
-* Historical race replay
-* Live strategy adaptation
-* Telemetry visualisation
-* Multi-agent strategist debate
-* RAG over historical race data
-* Driver-specific tyre models
-
----
+- `GET /health`
+- `GET /tracks` and `GET /tracks/{track_id}`
+- `POST /monte-carlo/generate`
+- `POST /race-engineer/briefing`
+- `POST /ai/explain`, `POST /ai/llm-explain`, and `POST /ai/scenario`
+- `GET /race-data/sessions` and related OpenF1 endpoints
+- `GET /live-strategy/session/{session_key}`
 
 ## Disclaimer
 
-RaceBrain is an educational and portfolio project inspired by Formula 1 strategy systems and motorsport analytics workflows.
-
-It is not affiliated with Formula 1, FIA, or any F1 team.
-
----
-
-## License
-
-MIT License.
+RaceBrain is not affiliated with Formula 1, the FIA, or any Formula 1 team.

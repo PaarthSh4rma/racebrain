@@ -22,7 +22,7 @@ export default function DriverSelect({
           <button
             key={driver.driver_number}
             onClick={() => onSelectDriver(driver.driver_number)}
-            className={`rounded-xl border px-4 py-3 text-left transition ${
+            className={`min-w-0 rounded-xl border px-4 py-3 text-left transition ${
               selectedDriver === driver.driver_number
                 ? "border-cyan-500/50 bg-cyan-500/10"
                 : "border-white/10 bg-black/20 hover:bg-white/5"
@@ -31,7 +31,7 @@ export default function DriverSelect({
             <p className="font-black text-white">
               {driver.name_acronym} #{driver.driver_number}
             </p>
-            <p className="text-sm text-white/50">{driver.team_name}</p>
+            <p className="break-words text-sm text-white/50">{driver.team_name}</p>
           </button>
         ))}
       </div>

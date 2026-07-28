@@ -14,13 +14,13 @@ export default function RecommendedStrategyCard({
         Recommended Call
       </p>
 
-      <div className="mt-3 flex items-start justify-between gap-4">
-        <div>
-          <p className="text-3xl font-black">Strategy {best.strategy_id}</p>
-          <p className="mt-2 text-white/60">{formatStrategy(best.strategy)}</p>
+      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0">
+          <p className="break-words text-2xl font-black sm:text-3xl">Strategy {best.strategy_id}</p>
+          <p className="mt-2 break-words text-white/60">{formatStrategy(best.strategy)}</p>
         </div>
 
-        <div className="text-right">
+        <div className="shrink-0 text-left sm:text-right">
           <p className="text-3xl font-black text-red-400">
             {best.win_percentage}%
           </p>
