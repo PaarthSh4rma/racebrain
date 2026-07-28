@@ -7,6 +7,7 @@ export type Strategy = {
   strategy_id: number;
   strategy: Stint[];
   win_percentage: number;
+  preference_percentage: number;
   average_total_time: number;
   std_dev: number;
 };

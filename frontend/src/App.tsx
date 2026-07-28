@@ -126,7 +126,7 @@ export default function App() {
 
             <p className="mt-6 text-lg leading-8 text-white/60">
               Monte Carlo strategy simulation with tyre degradation, pit loss
-              variance, candidate filtering, and win probability ranking.
+              variance, candidate filtering, and scenario-preference ranking.
             </p>
 
             <div className="mt-6">

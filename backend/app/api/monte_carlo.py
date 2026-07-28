@@ -60,6 +60,8 @@ class StrategyResult(BaseModel):
     strategy: list[StintRequest]
     win_probability: float
     win_percentage: float
+    preference_probability: float
+    preference_percentage: float
     average_total_time: float
     best_case: float
     worst_case: float

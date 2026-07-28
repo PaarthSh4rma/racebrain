@@ -1,4 +1,5 @@
 import random
+from math import sqrt
 from statistics import mean, stdev
 
 from app.simulation.race_engine import simulate_race
@@ -99,27 +100,48 @@ def calculate_win_probabilities(
         race_results = []
 
         safety_car_deployed = rng.random() < safety_car_probability
+        total_laps = sum(stint["laps"] for stint in strategies[0])
+        safety_car_lap = rng.randint(1, total_laps) if safety_car_deployed else None
 
         if safety_car_deployed:
             safety_car_count += 1
 
         simulated_base_lap = rng.gauss(base_lap_time, lap_variance)
-        if safety_car_deployed:
-            simulated_pit_loss = max(8.0, rng.gauss(pit_loss * 0.55, pit_variance))
-        else:
-            simulated_pit_loss = max(15.0, rng.gauss(pit_loss, pit_variance))
 
         for index, strategy in enumerate(strategies):
+            pit_laps = []
+            completed_laps = 0
+            for stint in strategy[:-1]:
+                completed_laps += stint["laps"]
+                pit_laps.append(completed_laps)
+
+            catches_safety_car = (
+                safety_car_lap is not None
+                and any(abs(pit_lap - safety_car_lap) <= 3 for pit_lap in pit_laps)
+            )
+            scenario_pit_loss = pit_loss * 0.55 if catches_safety_car else pit_loss
+            simulated_pit_loss = max(
+                8.0 if catches_safety_car else 15.0,
+                rng.gauss(scenario_pit_loss, pit_variance),
+            )
+            simulated_degradation = max(
+                0.7,
+                rng.gauss(degradation_multiplier, degradation_multiplier * 0.08),
+            )
 
             result = simulate_race(
                 base_lap_time=simulated_base_lap,
                 pit_loss=simulated_pit_loss,
                 strategy=strategy,
-                degradation_multiplier=degradation_multiplier,
+                degradation_multiplier=simulated_degradation,
             )
 
             strategy_id = index + 1
-            total_time = result["total_time"]
+            # Shared conditions keep comparisons paired, while this independent
+            # aggregate term represents traffic, pit execution, and lap-to-lap
+            # variation that does not affect every counterfactual identically.
+            execution_noise = rng.gauss(0, lap_variance * sqrt(total_laps))
+            total_time = result["total_time"] + execution_noise
 
             total_times_by_strategy[strategy_id].append(total_time)
 
@@ -146,6 +168,8 @@ def calculate_win_probabilities(
             "strategy": strategy,
             "win_probability": round(win_prob, 4),
             "win_percentage": round(win_prob * 100, 2),
+            "preference_probability": round(win_prob, 4),
+            "preference_percentage": round(win_prob * 100, 2),
             "average_total_time": round(mean(total_times), 3),
             "best_case": round(min(total_times), 3),
             "worst_case": round(max(total_times), 3),
@@ -183,8 +207,9 @@ def calculate_win_probabilities(
     recommendation = (
         f"Strategy {top_strategy['strategy_id']} is preferred: "
         f"{strategy_text}. "
-        f"It has a {top_strategy['win_percentage']}% win rate. "
-        f"Confidence is {confidence} because the win gap to the next-best strategy is {round(win_gap, 2)}%."
+        f"It was fastest in {top_strategy['preference_percentage']}% of sampled scenarios. "
+        f"Confidence is {confidence} because the preference gap to the next-best strategy is "
+        f"{round(win_gap, 2)} percentage points."
     )
 
     return {

@@ -30,10 +30,10 @@ export default function StrategyRanking({
 
               <div className="shrink-0 text-left sm:text-right">
                 <p className="text-xl font-black text-red-400">
-                  {item.win_percentage}%
+                  {item.preference_percentage}%
                 </p>
                 <p className="text-xs uppercase tracking-[0.2em] text-white/40">
-                  win rate
+                  scenario preference
                 </p>
               </div>
             </div>
