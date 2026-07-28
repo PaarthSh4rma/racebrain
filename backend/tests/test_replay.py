@@ -173,6 +173,32 @@ def test_deterministic_recommendation_and_safety_car_behavior(monkeypatch):
     assert first.recommendation == "keep_flexible"
 
 
+def test_race_control_resume_messages_clear_bounded_active_flags(monkeypatch):
+    case = clone_case(SAFETY_CAR_RACE)
+    case["race_control"].insert(
+        -1,
+        {
+            "date": "2024-05-26T13:12:00Z",
+            "lap_number": 8,
+            "category": "Flag",
+            "message": "RED FLAG",
+        },
+    )
+    case["race_control"].insert(
+        -1,
+        {
+            "date": "2024-05-26T13:13:00Z",
+            "lap_number": 9,
+            "category": "Flag",
+            "message": "DRS ENABLED",
+        },
+    )
+    install_case(monkeypatch, case)
+    snapshot = replay_service.build_replay_snapshot(request(lap=9))
+    assert snapshot.race_control.safety_car_active is False
+    assert snapshot.race_control.red_flag_active is False
+
+
 def test_seeded_alternatives_reproduce_and_share_sampled_conditions(monkeypatch):
     install_case(monkeypatch, DRY_RACE)
     first = replay_service.build_replay_assessment(request(lap=8, seed=123))

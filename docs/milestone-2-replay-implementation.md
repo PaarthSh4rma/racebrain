@@ -32,6 +32,8 @@ returned with incomplete-data warnings.
 Alternative calls use a transparent deterministic strategy score over the same
 configurable lap horizon under shared sampled pace and pit-loss conditions. It
 does not claim to model competitors, traffic, undercuts, or race-win probability.
+Wet compounds currently use the generic degradation fallback, so alternative
+scores should be read as relative bounded comparisons rather than wet-tyre models.
 
 Tyre-risk thresholds are deliberately simple: soft, medium, and hard compounds
 become high risk at estimated ages 18, 28, and 42 laps, with medium risk beginning

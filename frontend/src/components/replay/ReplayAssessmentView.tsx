@@ -4,10 +4,12 @@ function Metric({
   label,
   value,
   testId,
+  compact = false,
 }: {
   label: string;
   value: string;
   testId?: string;
+  compact?: boolean;
 }) {
   return (
     <div className="min-w-0 rounded-xl border border-white/10 bg-black/30 p-3">
@@ -15,7 +17,9 @@ function Metric({
         {label}
       </p>
       <p
-        className="mt-1 break-words text-lg font-black text-white"
+        className={`mt-1 break-words font-black text-white ${
+          compact ? "text-base" : "text-lg"
+        }`}
         data-testid={testId}
       >
         {value}
@@ -71,7 +75,11 @@ export default function ReplayAssessmentView({
           value={String(snapshot.decision_lap)}
           testId="decision-lap-value"
         />
-        <Metric label="Compound" value={snapshot.current_compound ?? "Unknown"} />
+        <Metric
+          label="Compound"
+          value={snapshot.current_compound ?? "Unknown"}
+          compact
+        />
         <Metric
           label="Tyre Age"
           value={

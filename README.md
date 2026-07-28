@@ -39,7 +39,15 @@ Hindsight prevention is enforced at the service boundary: laps and lap-numbered 
 
 Automated replay tests use five deterministic, timestamped fixtures—dry, safety-car, changing-weather, incomplete-data, and multiple-stint races—so validation never depends on live OpenF1 availability. Recommendations remain educational outputs from a deliberately simplified model.
 
-Replay screenshots are intentionally pending until the feature is captured from a real browser after deployment.
+The release-candidate captures below use genuine OpenF1 Monaco and United Kingdom race sessions. They were captured from the locally validated branch because the production backend intentionally remains on Milestone 1 until this pull request is reviewed.
+
+| Bounded Monaco replay | Changing-weather replay |
+| --- | --- |
+| ![Historical Decision Replay at Monaco lap 20](docs/screenshots/replay/desktop-replay-result.png) | ![Changing-weather replay at the United Kingdom Grand Prix](docs/screenshots/replay/changing-weather-replay.png) |
+
+<p align="center">
+  <img src="docs/screenshots/replay/mobile-390-replay.png" alt="Historical Decision Replay at a 390 pixel mobile viewport" width="390">
+</p>
 
 ## Product tour
 
@@ -51,7 +59,7 @@ Replay screenshots are intentionally pending until the feature is captured from 
   <img src="docs/screenshots/mobile-overview.jpg" alt="RaceBrain mobile layout at 390 pixels wide" width="390">
 </p>
 
-The images above document the released Milestone 1 experience. Milestone 2 replay screenshots remain pending until a real deployed browser capture is available.
+The original product-tour images document the released Milestone 1 experience; the replay images document the Milestone 2 release candidate.
 
 ## Local setup
 

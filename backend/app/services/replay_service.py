@@ -130,11 +130,38 @@ def _race_control_summary(events: list[RaceControlEvent]) -> RaceControlSummary:
     messages = [event.message or "" for event in events]
     safety_events = [message for message in messages if "SAFETY CAR" in message.upper()]
     red_events = [message for message in messages if "RED FLAG" in message.upper()]
-    latest = " ".join(messages[-3:]).upper()
-    safety_active = bool(safety_events) and not any(
-        phrase in latest for phrase in ("SAFETY CAR IN", "GREEN FLAG", "TRACK CLEAR")
-    )
-    red_active = bool(red_events) and "GREEN FLAG" not in latest
+    safety_active = False
+    red_active = False
+    for raw_message in messages:
+        message = raw_message.upper()
+        if any(
+            phrase in message
+            for phrase in ("SAFETY CAR DEPLOYED", "VIRTUAL SAFETY CAR DEPLOYED")
+        ):
+            safety_active = True
+        if any(
+            phrase in message
+            for phrase in (
+                "SAFETY CAR IN",
+                "VIRTUAL SAFETY CAR ENDING",
+                "GREEN FLAG",
+                "TRACK CLEAR",
+                "DRS ENABLED",
+            )
+        ):
+            safety_active = False
+        if "RED FLAG" in message or "SESSION SUSPENDED" in message:
+            red_active = True
+        if any(
+            phrase in message
+            for phrase in (
+                "RACE RESUMED",
+                "SESSION RESUMED",
+                "GREEN FLAG",
+                "DRS ENABLED",
+            )
+        ):
+            red_active = False
     return RaceControlSummary(
         safety_car_active=safety_active,
         red_flag_active=red_active,
