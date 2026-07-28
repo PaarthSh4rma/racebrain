@@ -81,6 +81,24 @@ def test_current_stint_and_tyre_age_use_bounded_information(monkeypatch):
     assert lap_eight.estimated_tyre_age == 2
 
 
+def test_active_stint_is_redacted_before_its_upstream_end(monkeypatch):
+    case = clone_case(MULTIPLE_STINT_RACE)
+    assert case["stints"][0]["lap_end"] == 6
+    assert case["stints"][1]["compound"] == "HARD"
+    install_case(monkeypatch, case)
+
+    snapshot = replay_service.build_replay_snapshot(request(lap=5))
+
+    assert snapshot.current_stint is not None
+    assert snapshot.current_stint.lap_end == 5
+    assert snapshot.current_stint.compound == "MEDIUM"
+    assert snapshot.estimated_tyre_age == 5
+    assert len(snapshot.bounded_stints) == 1
+    assert snapshot.bounded_stints[0].lap_end == 5
+    assert all(stint.compound != "HARD" for stint in snapshot.bounded_stints)
+    assert all(stint.lap_start <= 5 for stint in snapshot.bounded_stints)
+
+
 def test_ended_stint_is_not_presented_as_current(monkeypatch):
     case = clone_case(DRY_RACE)
     case["stints"] = [case["stints"][0]]
@@ -138,6 +156,8 @@ def test_missing_lap_timestamp_uses_conservative_lap_number_cutoff(monkeypatch):
     assert snapshot.cutoff_timestamp is None
     assert snapshot.data_quality.cutoff_source == "lap_number_only"
     assert snapshot.data_quality.records["weather"].included == 0
+    assert snapshot.data_quality.records["weather"].ignored_future == 0
+    assert snapshot.data_quality.records["weather"].ignored_unusable == len(case["weather"])
     assert snapshot.weather.trend == "unknown"
     assert any("timestamp-only context" in item for item in snapshot.data_quality.warnings)
 
@@ -211,6 +231,72 @@ def test_seeded_alternatives_reproduce_and_share_sampled_conditions(monkeypatch)
         "hold",
     }
     assert all(item.uncertainty >= 0 for item in first.alternatives)
+
+
+def test_safety_car_reduces_pit_now_cost_with_same_seed(monkeypatch):
+    install_case(monkeypatch, DRY_RACE)
+    green_snapshot = replay_service.build_replay_snapshot(request(lap=5))
+    safety_snapshot = green_snapshot.model_copy(
+        update={
+            "race_control": green_snapshot.race_control.model_copy(
+                update={"safety_car_active": True}
+            )
+        }
+    )
+
+    green_results, _ = replay_service.compare_alternatives(
+        green_snapshot,
+        replay_service.recommend_strategy(green_snapshot),
+        extend_laps=5,
+        simulations=100,
+        seed=123,
+    )
+    safety_results, _ = replay_service.compare_alternatives(
+        safety_snapshot,
+        replay_service.recommend_strategy(safety_snapshot),
+        extend_laps=5,
+        simulations=100,
+        seed=123,
+    )
+    green = {item.alternative: item for item in green_results}
+    safety = {item.alternative: item for item in safety_results}
+
+    assert safety["pit_now"].strategy_score < green["pit_now"].strategy_score
+    assert (
+        green["pit_now"].strategy_score - safety["pit_now"].strategy_score
+        == pytest.approx(
+            replay_service.GREEN_FLAG_PIT_LOSS_SECONDS
+            - replay_service.SAFETY_CAR_PIT_LOSS_SECONDS
+        )
+    )
+
+
+def test_future_changes_cannot_change_replay_assessment(monkeypatch):
+    first_future = clone_case(DRY_RACE)
+    second_future = clone_case(DRY_RACE)
+
+    first_future["stints"][0]["lap_end"] = 6
+    second_future["stints"][0]["lap_end"] = 11
+    second_future["stints"][1]["compound"] = "SOFT"
+    second_future["stints"][1]["lap_start"] = 12
+    second_future["stints"][1]["lap_end"] = 12
+    second_future["laps"][5]["lap_duration"] = 130.0
+    second_future["laps"][6]["lap_duration"] = 65.0
+    second_future["weather"][2]["rainfall"] = 1
+    second_future["weather"][2]["track_temperature"] = 12.0
+    second_future["race_control"][1]["message"] = "SAFETY CAR DEPLOYED"
+    second_future["race_control"][1]["lap_number"] = 9
+
+    install_case(monkeypatch, first_future)
+    first = replay_service.build_replay_assessment(request(lap=5, seed=8675309))
+    install_case(monkeypatch, second_future)
+    second = replay_service.build_replay_assessment(request(lap=5, seed=8675309))
+
+    assert first.snapshot == second.snapshot
+    assert first.recommendation == second.recommendation
+    assert first.recommendation.confidence == second.recommendation.confidence
+    assert first.alternatives == second.alternatives
+    assert first.recommended_alternative == second.recommended_alternative
 
 
 def test_each_simulation_samples_conditions_once_for_all_alternatives(monkeypatch):

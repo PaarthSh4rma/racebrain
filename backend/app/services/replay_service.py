@@ -26,6 +26,12 @@ from app.models.replay import (
 logger = logging.getLogger("racebrain.replay")
 client = OpenF1Client()
 
+# Educational defaults only. They are deliberately simple model assumptions,
+# not circuit-accurate pit-lane measurements.
+GREEN_FLAG_PIT_LOSS_SECONDS = 22.0
+SAFETY_CAR_PIT_LOSS_SECONDS = 12.0
+PIT_LOSS_STD_DEV_SECONDS = 1.2
+
 
 class ReplayValidationError(ValueError):
     def __init__(self, message: str, status_code: int = 422):
@@ -211,6 +217,7 @@ def build_replay_snapshot(request: ReplayRequest) -> ReplaySnapshot:
         key=lambda item: item.lap_number,
     )
     available_laps = sorted({lap.lap_number for lap in completed_laps})
+    unusable_laps = invalid_laps + duplicate_laps + len(laps) - len(completed_laps)
     if request.decision_lap not in available_laps:
         raise ReplayValidationError(
             "Decision lap must be one of the driver's available completed laps."
@@ -290,7 +297,11 @@ def build_replay_snapshot(request: ReplayRequest) -> ReplaySnapshot:
     future_weather = [
         item for item in weather if cutoff is not None and item.date and item.date > cutoff
     ]
-    unknown_time_weather = [item for item in weather if item.date is None]
+    unusable_weather = [
+        item
+        for item in weather
+        if item.date is None or (cutoff is None and item.date is not None)
+    ]
     if not bounded_weather:
         warnings.append("No weather sample could be proven available by the cutoff.")
 
@@ -307,13 +318,16 @@ def build_replay_snapshot(request: ReplayRequest) -> ReplaySnapshot:
     )
     bounded_events = []
     future_events = []
+    unusable_events = []
     for event in events:
         is_future_lap = event.lap_number is not None and event.lap_number > request.decision_lap
         is_future_time = cutoff is not None and event.date is not None and event.date > cutoff
         timestamp_unknown = cutoff is None and event.lap_number is None
         context_unknown = event.date is None and event.lap_number is None
-        if is_future_lap or is_future_time or timestamp_unknown or context_unknown:
+        if is_future_lap or is_future_time:
             future_events.append(event)
+        elif timestamp_unknown or context_unknown:
+            unusable_events.append(event)
         else:
             bounded_events.append(event)
 
@@ -321,8 +335,9 @@ def build_replay_snapshot(request: ReplayRequest) -> ReplaySnapshot:
     if invalid_counts:
         warnings.append(f"{invalid_counts} malformed session or driver records were ignored.")
     malformed_context = (
-        invalid_laps + duplicate_laps + invalid_stints + invalid_weather + invalid_events
-        + len(unknown_time_weather)
+        unusable_laps + invalid_stints + invalid_weather + invalid_events
+        + len(unusable_weather)
+        + len(unusable_events)
     )
     if malformed_context:
         warnings.append(
@@ -363,17 +378,24 @@ def build_replay_snapshot(request: ReplayRequest) -> ReplaySnapshot:
             latest_included_timestamp=latest_timestamp,
             records={
                 "laps": RecordCount(
-                    included=len(bounded_laps), ignored_future=len(future_laps)
+                    included=len(bounded_laps),
+                    ignored_future=len(future_laps),
+                    ignored_unusable=unusable_laps,
                 ),
                 "stints": RecordCount(
-                    included=len(bounded_stints), ignored_future=len(future_stints)
+                    included=len(bounded_stints),
+                    ignored_future=len(future_stints),
+                    ignored_unusable=invalid_stints,
                 ),
                 "weather": RecordCount(
                     included=len(bounded_weather),
-                    ignored_future=len(future_weather) + len(unknown_time_weather),
+                    ignored_future=len(future_weather),
+                    ignored_unusable=invalid_weather + len(unusable_weather),
                 ),
                 "race_control": RecordCount(
-                    included=len(bounded_events), ignored_future=len(future_events)
+                    included=len(bounded_events),
+                    ignored_future=len(future_events),
+                    ignored_unusable=invalid_events + len(unusable_events),
                 ),
             },
             warnings=warnings,
@@ -493,13 +515,17 @@ def compare_alternatives(
     age = snapshot.estimated_tyre_age or 0
     compound = (snapshot.current_compound or "MEDIUM").upper()
     degradation = {"SOFT": 0.16, "MEDIUM": 0.10, "HARD": 0.07}.get(compound, 0.10)
-    reduced_pit_loss = snapshot.race_control.safety_car_active
+    pit_loss_baseline = (
+        SAFETY_CAR_PIT_LOSS_SECONDS
+        if snapshot.race_control.safety_car_active
+        else GREEN_FLAG_PIT_LOSS_SECONDS
+    )
 
     scores = {"pit_now": [], "extend": [], "hold": []}
     for _ in range(simulations):
         pace_noise = rng.gauss(0, 0.25)
-        pit_noise = rng.gauss(0, 1.2)
-        pit_loss = max(8.0 if reduced_pit_loss else 15.0, 22.0 + pit_noise)
+        pit_noise = rng.gauss(0, PIT_LOSS_STD_DEV_SECONDS)
+        pit_loss = max(0.0, pit_loss_baseline + pit_noise)
         shared_base = base_lap + pace_noise
         scores["pit_now"].append(pit_loss + extend_laps * (shared_base - 0.15))
         scores["extend"].append(

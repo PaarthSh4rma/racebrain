@@ -22,6 +22,7 @@ export type DriverSummary = {
 export type RecordCount = {
   included: number;
   ignored_future: number;
+  ignored_unusable: number;
 };
 
 export type ReplaySnapshot = {

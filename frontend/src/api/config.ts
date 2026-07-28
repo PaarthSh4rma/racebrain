@@ -1,13 +1,12 @@
-const configuredApiUrl =
-  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
 const isVercelDeployment =
   typeof window !== "undefined" && window.location.hostname.endsWith(".vercel.app");
 
-// Vercel previews have ephemeral origins that are intentionally absent from the
-// production API's exact CORS allowlist. The same-origin rewrite keeps previews
-// on the configured production-safe backend without weakening backend CORS.
+// An explicit environment always wins, allowing branch previews to use an
+// isolated backend. Vercel falls back to the same-origin rewrite only when no
+// backend is configured; local development continues to use local FastAPI.
 export const API_URL = (
-  isVercelDeployment ? "/api" : configuredApiUrl
+  configuredApiUrl || (isVercelDeployment ? "/api" : "http://127.0.0.1:8000")
 ).replace(/\/$/, "");
 
 export async function apiError(response: Response, fallback: string): Promise<Error> {

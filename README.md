@@ -123,6 +123,13 @@ The backend is deployed from `render.yaml` on Render's free web-service plan. Se
 
 Production URL: https://racebrain-api.onrender.com
 
+For an isolated pull-request deployment, create a free Render **Service Preview**
+for the backend and set Vercel's branch-specific Preview variable
+`VITE_API_URL` to that preview's exact `https://…onrender.com` URL. Set the
+preview backend's `CORS_ALLOWED_ORIGINS` to the exact Vercel branch-preview
+origin. Do not use a wildcard, reuse an ephemeral URL in source control, or
+change either production environment.
+
 ### Vercel frontend
 
 Import the repository, set the project root to `frontend`, and set `VITE_API_URL` to the Render backend URL. `frontend/vercel.json` declares the Vite build and output directory.

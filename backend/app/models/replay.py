@@ -97,6 +97,7 @@ class DecisionLapAvailability(BaseModel):
 class RecordCount(BaseModel):
     included: int = 0
     ignored_future: int = 0
+    ignored_unusable: int = 0
 
 
 class ReplayDataQuality(BaseModel):
