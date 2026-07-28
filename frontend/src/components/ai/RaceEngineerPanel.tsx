@@ -95,7 +95,10 @@ export default function RaceEngineerPanel({
   }
 
   return (
-    <div className="min-w-0 rounded-[2rem] border border-white/10 bg-black/40 p-6 backdrop-blur-xl">
+    <div
+      data-testid="race-engineer-card"
+      className="min-w-0 rounded-[2rem] border border-white/10 bg-black/40 p-4 backdrop-blur-xl sm:p-6"
+    >
       <p className="text-xs uppercase tracking-[0.35em] text-cyan-400">
         Race Engineer AI
       </p>
@@ -127,7 +130,7 @@ export default function RaceEngineerPanel({
           <button
             onClick={sendMessage}
             disabled={loading}
-            className="mt-4 rounded-2xl bg-cyan-500 px-6 py-3 font-black text-black transition hover:scale-[1.02] disabled:opacity-50"
+            className="mt-4 w-full rounded-2xl bg-cyan-500 px-5 py-3 font-black text-black transition hover:scale-[1.02] disabled:opacity-50 sm:w-auto sm:px-6"
           >
             {loading ? "Race Engineer analysing..." : "Ask Race Engineer"}
           </button>

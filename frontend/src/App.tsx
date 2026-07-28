@@ -76,17 +76,19 @@ export default function App() {
     }
   }
 
-  return (
+  const selectedTrackName =
+    tracks.find((profile) => profile.id === track)?.name ?? track.replaceAll("_", " ");
 
+  return (
     <main className="min-h-screen overflow-x-hidden text-white">
       <div className="absolute inset-0 overflow-hidden opacity-30">
         <div className="absolute left-[-10%] top-16 h-72 w-72 rounded-full bg-red-600 blur-3xl" />
         <div className="absolute right-[-10%] top-40 h-96 w-96 rounded-full bg-indigo-500 blur-3xl" />
       </div>
 
-     <div className="relative mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
-        <nav className="mb-10 flex items-center justify-between rounded-3xl border border-white/10 bg-white/5 px-6 py-4 backdrop-blur-xl">
-          <div>
+      <div className="relative mx-auto w-full max-w-7xl px-3 py-5 sm:px-6 sm:py-8">
+        <nav className="mb-6 flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/5 px-4 py-4 backdrop-blur-xl sm:mb-10 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="min-w-0">
             <p className="text-xs uppercase tracking-[0.45em] text-red-400">
               RaceBrain
             </p>
@@ -95,26 +97,29 @@ export default function App() {
             </h1>
           </div>
 
-          <div className="rounded-full border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-bold text-red-300">
-            {track.toUpperCase()}
+          <div className="max-w-full self-start break-words rounded-full border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-bold text-red-300 sm:self-auto">
+            {selectedTrackName}
           </div>
         </nav>
-<motion.div
-  initial={{ opacity: 0, y: 24 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.5 }}
-  className="min-w-0 rounded-[2rem] border border-white/10 bg-black/40 p-8 shadow-2xl backdrop-blur-xl"
->
-       <section className="grid gap-6 lg:grid-cols-2">
-          <div className="min-w-0 rounded-[2rem] border border-white/10 bg-black/40 p-8 shadow-2xl backdrop-blur-xl">
-            <div className="mb-8 flex items-center gap-3">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="min-w-0 rounded-[2rem] border border-white/10 bg-black/40 p-3 shadow-2xl backdrop-blur-xl sm:p-6 lg:p-8"
+        >
+          <section className="grid gap-6 lg:grid-cols-2">
+          <div
+            data-testid="simulation-card"
+            className="min-w-0 rounded-[2rem] border border-white/10 bg-black/40 p-4 shadow-2xl backdrop-blur-xl sm:p-6 lg:p-8"
+          >
+            <div className="mb-6 flex items-center gap-3 sm:mb-8">
               <Flag className="text-red-500" />
-              <span className="text-sm uppercase tracking-[0.35em] text-white/50">
+              <span className="min-w-0 text-xs uppercase tracking-[0.25em] text-white/50 sm:text-sm sm:tracking-[0.35em]">
                 Strategy Simulation Bay
               </span>
             </div>
 
-            <h2 className="text-5xl font-black leading-none tracking-tight">
+            <h2 className="text-3xl font-black leading-none tracking-tight sm:text-4xl lg:text-5xl">
               Engineer the race.
               <span className="text-red-500"> Simulate the call.</span>
             </h2>
@@ -143,7 +148,7 @@ export default function App() {
               {trackError && <p className="mt-3 text-sm text-red-300">{trackError}</p>}
             </div>
 
-            <div className="mt-8 grid grid-cols-2 gap-4">
+            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Slider
                 label="Total Laps"
                 value={inputs.total_laps}
@@ -186,7 +191,7 @@ export default function App() {
             <button
               onClick={handleRunSimulation}
               disabled={loading}
-              className="mt-8 rounded-2xl bg-red-600 px-8 py-4 text-sm font-black uppercase tracking-[0.25em] text-white shadow-2xl shadow-red-600/30 transition hover:scale-[1.02] hover:bg-red-500 disabled:opacity-50"
+              className="mt-8 w-full rounded-2xl bg-red-600 px-5 py-4 text-sm font-black uppercase tracking-[0.2em] text-white shadow-2xl shadow-red-600/30 transition hover:scale-[1.02] hover:bg-red-500 disabled:opacity-50 sm:w-auto sm:px-8 sm:tracking-[0.25em]"
             >
               {loading ? "Running simulation..." : "Run Strategy Model"}
             </button>
@@ -198,7 +203,7 @@ export default function App() {
             )}
 
             {result && (
-              <div className="mt-6 grid grid-cols-4 gap-3">
+              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <Metric
                   icon={<Timer />}
                   label="Base Lap"
@@ -226,19 +231,20 @@ export default function App() {
             )}
           </div>
           
-<motion.div
-  initial={{ opacity: 0, y: 24 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.5, delay: 0.1 }}
->
-<RaceEngineerPanel
-  result={result}
-  track={track}
-  totalLaps={inputs.total_laps}
-/></motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              <RaceEngineerPanel
+                result={result}
+                track={track}
+                totalLaps={inputs.total_laps}
+              />
+            </motion.div>
         </section>
 
-<LiveStrategyPanel />
+          <LiveStrategyPanel />
         </motion.div>
       </div>
     </main>

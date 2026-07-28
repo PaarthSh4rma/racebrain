@@ -18,13 +18,13 @@ export default function Slider({
   const percentage = ((value - min) / (max - min)) * 100;
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-xs uppercase tracking-[0.2em] text-white/40">
+    <div className="min-w-0 rounded-2xl border border-white/10 bg-black/40 p-4">
+      <div className="mb-4 flex min-w-0 items-center justify-between gap-3">
+        <p className="min-w-0 break-words text-xs uppercase tracking-[0.15em] text-white/40 sm:tracking-[0.2em]">
           {label}
         </p>
 
-        <p className="rounded-full bg-red-500/10 px-3 py-1 text-sm font-black text-red-300">
+        <p className="shrink-0 rounded-full bg-red-500/10 px-3 py-1 text-sm font-black text-red-300">
           {value}
           {suffix}
         </p>

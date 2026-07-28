@@ -108,13 +108,16 @@ export default function LiveStrategyPanel() {
   }
 
   return (
-    <section className="mt-8 rounded-[2rem] border border-white/10 bg-black/40 p-6 backdrop-blur-xl">
+    <section
+      data-testid="historical-card"
+      className="mt-6 min-w-0 rounded-[2rem] border border-white/10 bg-black/40 p-4 backdrop-blur-xl sm:mt-8 sm:p-6"
+    >
       <div className="mb-6">
         <p className="text-xs uppercase tracking-[0.35em] text-red-400">
           V3 Real Race Intelligence
         </p>
 
-        <h2 className="mt-2 text-3xl font-black">
+        <h2 className="mt-2 break-words text-2xl font-black sm:text-3xl">
           OpenF1 Live Strategy Mode
         </h2>
 
@@ -151,7 +154,7 @@ export default function LiveStrategyPanel() {
           <button
             onClick={handleLoadStrategy}
             disabled={loading || !selectedSessionKey}
-            className="w-full rounded-2xl bg-red-600 px-6 py-4 font-black uppercase tracking-[0.2em] text-white transition hover:bg-red-500 disabled:opacity-50"
+            className="w-full rounded-2xl bg-red-600 px-4 py-4 text-sm font-black uppercase tracking-[0.15em] text-white transition hover:bg-red-500 disabled:opacity-50 sm:px-6 sm:tracking-[0.2em]"
           >
             {loading ? "Building Race State..." : "Generate Live Strategy Call"}
           </button>

@@ -14,7 +14,7 @@ export default function RaceStateSummary({
         Race State Summary
       </p>
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Metric label="Track Temp" value={`${weather.track_temperature_avg}°C`} />
         <Metric label="Air Temp" value={`${weather.air_temperature_avg}°C`} />
         <Metric label="Safety Cars" value={String(race_control.safety_car_events)} />
