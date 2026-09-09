@@ -1,6 +1,6 @@
 """Provenance and data-quality contracts."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pydantic import Field, field_validator
 
@@ -28,9 +28,11 @@ class Provenance(FrozenDomainModel):
     @field_validator("observed_at", "retrieved_at")
     @classmethod
     def timestamps_must_be_aware(cls, value: datetime | None) -> datetime | None:
-        if value is not None and value.tzinfo is None:
-            raise ValueError("timestamps must include a timezone")
-        return value
+        if value is not None:
+            if value.tzinfo is None or value.utcoffset() is None:
+                raise ValueError("timestamps must be usable timezone-aware values")
+            return value.astimezone(timezone.utc)
+        return None
 
 
 class DataQuality(FrozenDomainModel):

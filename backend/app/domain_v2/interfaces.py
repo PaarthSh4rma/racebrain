@@ -7,6 +7,7 @@ from .estimates import DegradationEstimate, PaceEstimate
 from .identity import CompetitorId, SessionId
 from .race_state import CarState, RaceState
 from .strategy import DecisionRecommendation, StrategyEvaluation, StrategyOption
+from .validation import ValidationResult
 
 
 class RaceDataSource(Protocol):
@@ -27,8 +28,8 @@ class TyreModel(Protocol):
     def estimate_degradation(self, state: RaceState, competitor_id: CompetitorId) -> DegradationEstimate: ...
 
 
-class CompetitorModel(Protocol):
-    """Return competitor states relevant to a focal car and decision horizon."""
+class CompetitorSelector(Protocol):
+    """Select observed competitor states relevant to a focal entry."""
 
     def relevant_competitors(
         self, state: RaceState, competitor_id: CompetitorId
@@ -54,4 +55,6 @@ class DecisionEngine(Protocol):
 class ValidationEngine(Protocol):
     """Score model estimates against a separately supplied observed outcome."""
 
-    def validate(self, case_id: str, estimate: StrategyEvaluation, observed: RaceState) -> dict[str, float]: ...
+    def validate(
+        self, case_id: str, estimate: StrategyEvaluation, observed: RaceState
+    ) -> ValidationResult: ...

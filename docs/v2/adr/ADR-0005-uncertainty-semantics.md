@@ -6,7 +6,7 @@
 V1 uses standard deviation, “confidence,” preference and “win” terminology without consistent mathematical meaning.
 
 ## Decision
-Every estimate names its value, unit, model name/version/config hash and assumptions. A point estimate does not require invented spread. Uncertainty names its representation (empirical, normal, quantile, bounded or unspecified); intervals include construction/coverage where applicable and empirical P10/P50/P90 are supported. Missing uncertainty is not zero. Probability, confidence, data quality and descriptive scenario frequency remain separate concepts.
+Every estimate names its value, unit, model name/version/config hash and assumptions. A point estimate does not require invented spread. Uncertainty uses exactly one defined representation: bounded/statistical interval, normal standard deviation, or empirical P10/P50/P90 quantiles. Raw sample vectors and ambiguous empirical/unspecified kinds are excluded. Missing uncertainty is not zero. Probability, confidence, data quality and descriptive scenario frequency remain separate concepts.
 
 ## Consequences
 Some future fields remain absent until supported; UI/API must not collapse distinct concepts.

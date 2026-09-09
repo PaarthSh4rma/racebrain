@@ -4,4 +4,6 @@
 
 Current result: **no outward infrastructure dependency violations**. Pydantic is the intentionally selected contract dependency. Runtime V1 imports no V2 module, so production/API/frontend behaviour is unchanged.
 
+The current selection port is named `CompetitorSelector`; no foundation interface claims competitor-behaviour modelling. `ValidationEngine` returns typed `ValidationResult` rather than an untyped numeric dictionary.
+
 Future CI should retain an import-boundary test or static rule as adapters are added. Provider/API layers may import inward; reversing that dependency is a release blocker.

@@ -40,11 +40,9 @@ class ConfidenceLevel(StrEnum):
 
 
 class DistributionKind(StrEnum):
-    EMPIRICAL = "empirical"
     NORMAL = "normal"
     QUANTILE = "quantile"
     BOUNDED = "bounded"
-    UNSPECIFIED = "unspecified"
 
 
 class TriggerMetric(StrEnum):

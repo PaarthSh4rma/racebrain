@@ -17,8 +17,8 @@ Dependencies are sequential unless stated: V2.1 requires V2.0; V2.2 requires V2.
 - **Reuse:** OpenF1 client/cache, replay tolerant parsing, cutoff logic and fixtures.
 - **Adapt:** use the existing invariant and fixtures to design provider DTO/filter/mapping separation; introduce `adapters/openf1` and `application/reconstruct_state.py`. Do not copy the focal-driver implementation unchanged.
 - **Legacy retained:** all V1 replay/live endpoints and V1 models.
-- **Risks/tests:** timestamp ambiguity, position/gap absence, provider drift, hindsight leakage and per-driver N+1 provider reads; golden mapping, malformed/missing data, timezone/unit, mixed-lap full-field and adversarial future-record tests.
-- **Acceptance:** focal completed lap establishes T; the full field uses each competitor's latest defensible observation at or before T; no post-cutoff observation; provider IDs optional; adapters use bulk reads where supported.
+- **Risks/tests:** timestamp ambiguity, seconds-versus-laps gaps, position absence, provider drift, hindsight leakage and per-driver N+1 provider reads; golden mapping, missing/untimed data, usable-timezone/UTC, mixed-lap full-field and adversarial future-record tests.
+- **Acceptance:** focal completed lap establishes T; every included competitor, lap, weather and track-status value has defensible timing at or before T; the full field uses each competitor's own latest observation; untimed records degrade DataQuality rather than enter state; adapters use bulk reads where supported.
 - **Non-goals:** pace/tyre estimates, recommendations, frontend changes.
 
 ## V2.2 Pace & Tyre Estimation
@@ -36,7 +36,7 @@ Dependencies are sequential unless stated: V2.1 requires V2.0; V2.2 requires V2.
 - **Objective:** relative car state, relevant competitors and rejoin/traffic estimates.
 - **Reuse/adapt:** canonical full-field competitors and available OpenF1 position/interval observations.
 - **Legacy retained:** V1 single-car replay.
-- **New:** competitor/traffic model, rejoin estimator, field-state adapter extensions.
+- **New:** concrete competitor/traffic behaviour model contracts and implementations, rejoin estimator, field-state adapter extensions. The foundation's `CompetitorSelector` is only a filter and is not treated as modelling.
 - **Risks/tests:** sparse timing, lapped cars, pit cycles/status changes; field ordering, gap semantics, rejoin error and missing-data tests.
 - **Acceptance:** lap-27 pit option reports supported nearby competitors/gaps with uncertainty and limitations.
 - **Non-goals:** recommendation policy or UI redesign.
@@ -46,7 +46,7 @@ Dependencies are sequential unless stated: V2.1 requires V2.0; V2.2 requires V2.
 - **Objective:** evaluate structured actions/sensitivities and emit deterministic recommendations/triggers.
 - **Reuse/adapt:** seed discipline and paired-scenario idea; discard “win probability” semantics.
 - **Legacy retained:** V1 Monte Carlo, candidate generation, Race Engineer and AI routes.
-- **New:** `simulation_v2`, scenario/sensitivity engine, `decision_v2`, `/v2` APIs.
+- **New:** `simulation_v2`, scenario/sensitivity engine, `decision_v2`, `/v2` APIs. Recommendations select complete evaluated option IDs; raw simulation samples stay internal while DTOs expose typed estimate/quantile summaries.
 - **Risks/tests:** infeasible options, correlated uncertainty, unstable rankings; determinism, property/edge, sensitivity, traceability and API contract tests.
 - **Acceptance:** north-star pit/stay-out comparison includes supported time/rejoin/traffic/risk outputs and machine triggers; all lineage recorded.
 - **Non-goals:** operational authority, autonomous calls, LLM decision input.

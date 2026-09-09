@@ -10,11 +10,11 @@ This glossary is normative for V2. “AI” is not a domain concept.
 | DecisionPoint | Application-level immutable context combining an existing RaceState, focal CompetitorId and decision horizon. It is not a persisted aggregate and does not duplicate cutoff semantics. |
 | CarState | Observed state of one competitive session entry, keyed by CompetitorId: position/gaps when known, driver, tyre, recent laps, and pit state. It never identifies a physical chassis. |
 | CompetitorState | A CarState interpreted relative to the focal car, optionally enriched only by competitor-model estimates. |
-| Gap | Time or laps separating two cars; endpoints, sign convention, and unit must be named. |
+| Gap | Strict non-negative separation expressed as exactly one of seconds or positive whole laps. Endpoints and direction must be named. |
 | Interval | Difference between adjacent classified cars, normally seconds; not interchangeable with gap to leader. |
 | Position | One-based classified running order at the cutoff; absent when not reliably observed. |
-| TrackStatus | Controlled race-control state: green, yellow, VSC, safety car, red, or unknown. |
-| WeatherState | Latest cutoff-bounded environmental observations with explicit units and provenance. |
+| TrackStatus | Controlled race-control state carried inside a timestamped TrackStatusState; absent when no defensible observation exists. |
+| WeatherState | Latest cutoff-bounded environmental observation with explicit units, observed-at time and provenance. |
 | TyreCompound | Controlled compound family: Soft, Medium, Hard, Intermediate, Wet, or Unknown. |
 | TyreSet | A physically distinct set where identity is known; availability is observed metadata, not inferred allocation. |
 | TyreSetState | Compound, age and optional set/stint identity at a particular RaceState. |
@@ -31,10 +31,10 @@ This glossary is normative for V2. “AI” is not a domain concept.
 | StrategyAction | Machine-readable instruction: stay out, pit now, pit in a lap/window with tyre choice, or reconsider. |
 | StrategyPlan | Ordered non-empty sequence of StrategyActions. |
 | StrategyOption | Identified plan offered for evaluation. |
-| StrategyEvaluation | Modelled consequences and risks for one option under one state/configuration/seed. |
+| StrategyEvaluation | Modelled consequences and risks for one complete option under one state/configuration/seed. Distribution summaries use typed estimate uncertainty, never raw sample vectors. |
 | DecisionTrigger | Machine-evaluable registered metric reference/operator/threshold that activates a StrategyAction; it contains no expression or code. |
-| DecisionRecommendation | Preferred action, alternatives, confidence, assumptions, warnings, change triggers and model lineage. |
-| Observation | A measured or provider-reported fact with observation time and provenance. |
+| DecisionRecommendation | Preferred evaluated option ID, complete evaluations, confidence, assumptions, warnings, change triggers and model lineage. |
+| Observation | A measured or provider-reported fact with a defensible UTC observation/completion time and provenance. Untimed historical records are excluded and reported through DataQuality. |
 | Provenance | Source, version, timestamps, provider metadata, transformations and assumptions supporting a value. |
 | DataQuality | Completeness/fitness assessment and explicit missing-field warnings; not model confidence. |
 | ModelVersion | Stable model name, version and configuration content hash required to reproduce an estimate. |

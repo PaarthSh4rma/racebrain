@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, tzinfo
+import math
 import ast
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from app.domain_v2.enums import (
     StrategyActionType,
     TriggerMetric,
     TriggerOperator,
+    TrackStatus,
     TyreCompound,
 )
 from app.domain_v2.estimates import (
@@ -22,9 +24,13 @@ from app.domain_v2.estimates import (
 )
 from app.domain_v2.identity import CompetitorId, EventId, SessionId
 from app.domain_v2.provenance import ExternalIdentifier
-from app.domain_v2.race_state import CarState, Event, LapObservation, RaceState, Session
+from app.domain_v2.race_state import (
+    CarState, Event, Gap, LapObservation, RaceState, Session,
+    TrackStatusState, WeatherState,
+)
 from app.domain_v2.strategy import (
     DecisionTrigger,
+    DecisionRecommendation,
     PositionProbability,
     StrategyAction,
     StrategyEvaluation,
@@ -33,6 +39,7 @@ from app.domain_v2.strategy import (
     MetricRef,
 )
 from app.domain_v2.tyre import TyreSet, TyreSetState
+from app.domain_v2.validation import ValidationMetric, ValidationResult
 
 
 NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
@@ -41,9 +48,8 @@ NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 def state(**updates):
     values = {
         "session": Session(session_id=SessionId("race-1"), event=Event(event_id=EventId("event-1"), name="Test GP"), name="Race"),
-        "session_lap": 27,
         "observation_cutoff": NOW,
-        "competitors": (CarState(competitor_id=CompetitorId("entry-5"), current_lap=27),),
+        "competitors": (CarState(competitor_id=CompetitorId("entry-5"), observed_at=NOW, current_lap=27),),
     }
     values.update(updates)
     return RaceState(**values)
@@ -52,7 +58,7 @@ def state(**updates):
 def test_race_state_is_immutable_and_rejects_extras():
     snapshot = state()
     with pytest.raises(ValidationError):
-        snapshot.session_lap = 28
+        snapshot.observation_cutoff = NOW + timedelta(seconds=1)
     with pytest.raises(ValidationError):
         RaceState(**snapshot.model_dump(), openf1_session_key=123)
 
@@ -182,9 +188,69 @@ def test_relative_competitor_metric_validates_cleanly():
     assert ref.relative_to == CompetitorId("entry-6")
 
 
+@pytest.mark.parametrize("operand", [
+    MetricRef(metric=TriggerMetric.PIT_LOSS_S),
+    MetricRef(metric=TriggerMetric.RAIN_CROSSOVER_LAPS),
+    MetricRef(metric=TriggerMetric.TRACK_STATUS),
+])
+def test_global_trigger_metrics_reject_competitor_references(operand):
+    with pytest.raises(ValidationError):
+        MetricRef(metric=operand.metric, subject=CompetitorId("entry-5"))
+
+
+def test_subject_and_relative_trigger_rules_are_enforced():
+    with pytest.raises(ValidationError):
+        MetricRef(metric=TriggerMetric.DEGRADATION_S_PER_LAP)
+    with pytest.raises(ValidationError):
+        MetricRef(
+            metric=TriggerMetric.REJOIN_MARGIN_S,
+            subject=CompetitorId("entry-5"), relative_to=CompetitorId("entry-5"),
+        )
+
+
+@pytest.mark.parametrize("operator,threshold", [
+    (TriggerOperator.GT, 3.14),
+    (TriggerOperator.CHANGES_TO, "whatever"),
+])
+def test_track_status_trigger_rejects_incompatible_operator_or_threshold(operator, threshold):
+    with pytest.raises(ValidationError):
+        DecisionTrigger(
+            operand=MetricRef(metric=TriggerMetric.TRACK_STATUS), operator=operator,
+            threshold=threshold, action=StrategyAction(action_type="stay_out"),
+        )
+
+
+def test_track_status_trigger_accepts_typed_transition():
+    trigger = DecisionTrigger(
+        operand=MetricRef(metric=TriggerMetric.TRACK_STATUS),
+        operator=TriggerOperator.CHANGES_TO, threshold=TrackStatus.VSC,
+        action=StrategyAction(action_type="pit_now"),
+    )
+    assert trigger.threshold is TrackStatus.VSC
+
+
+@pytest.mark.parametrize("threshold", ["2.5", True])
+def test_numeric_trigger_rejects_string_and_bool(threshold):
+    with pytest.raises(ValidationError):
+        DecisionTrigger(
+            operand=MetricRef(metric=TriggerMetric.PIT_LOSS_S), operator=TriggerOperator.GT,
+            threshold=threshold, action=StrategyAction(action_type="stay_out"),
+        )
+
+
+def test_numeric_trigger_rejects_changes_to():
+    with pytest.raises(ValidationError):
+        DecisionTrigger(
+            operand=MetricRef(metric=TriggerMetric.PIT_LOSS_S),
+            operator=TriggerOperator.CHANGES_TO, threshold=2.5,
+            action=StrategyAction(action_type="stay_out"),
+        )
+
+
 def test_future_observations_are_rejected_by_cutoff():
     car = CarState(
         competitor_id=CompetitorId("entry-5"),
+        observed_at=NOW + timedelta(seconds=1),
         recent_laps=(LapObservation(lap_number=28, lap_time_s=90, completed_at=NOW + timedelta(seconds=1)),),
     )
     with pytest.raises(ValidationError):
@@ -194,16 +260,124 @@ def test_future_observations_are_rejected_by_cutoff():
 def test_full_field_competitors_may_have_different_lap_context_at_same_cutoff():
     snapshot = state(
         competitors=(
-            CarState(competitor_id=CompetitorId("entry-5"), current_lap=27),
-            CarState(competitor_id=CompetitorId("entry-6"), current_lap=26),
+            CarState(competitor_id=CompetitorId("entry-5"), observed_at=NOW, current_lap=27),
+            CarState(competitor_id=CompetitorId("entry-6"), observed_at=NOW, current_lap=26),
         )
     )
     assert {item.current_lap for item in snapshot.competitors} == {26, 27}
 
 
+def test_lap_completion_is_required_and_cannot_postdate_car_observation():
+    with pytest.raises(ValidationError):
+        LapObservation(lap_number=1, lap_time_s=90)
+    with pytest.raises(ValidationError):
+        CarState(
+            competitor_id=CompetitorId("entry-5"), observed_at=NOW,
+            recent_laps=(LapObservation(lap_number=27, lap_time_s=90, completed_at=NOW + timedelta(seconds=1)),),
+        )
+
+
+@pytest.mark.parametrize("field,value", [
+    ("weather", WeatherState(observed_at=NOW + timedelta(seconds=1))),
+    ("track_status", TrackStatusState(status=TrackStatus.GREEN, observed_at=NOW + timedelta(seconds=1))),
+])
+def test_timed_state_cannot_postdate_cutoff(field, value):
+    with pytest.raises(ValidationError):
+        state(**{field: value})
+
+
+def test_canonical_timestamps_normalise_to_utc_and_reject_unusable_tzinfo():
+    offset_time = datetime(2026, 1, 1, 11, tzinfo=timezone(timedelta(hours=11)))
+    assert state(observation_cutoff=offset_time).observation_cutoff == NOW
+
+    class UnusableTimezone(tzinfo):
+        def utcoffset(self, dt):
+            return None
+
+    with pytest.raises(ValidationError):
+        state(observation_cutoff=datetime(2026, 1, 1, tzinfo=UnusableTimezone()))
+
+
+@pytest.mark.parametrize("payload", [
+    {}, {"seconds": 1, "laps": 1}, {"seconds": -1}, {"laps": 0}, {"laps": 1.5},
+])
+def test_gap_rejects_invalid_representations(payload):
+    with pytest.raises(ValidationError):
+        Gap(**payload)
+
+
+def test_gap_supports_seconds_and_lapped_competitor():
+    assert Gap(seconds=2.4).seconds == 2.4
+    lapped = CarState(
+        competitor_id=CompetitorId("entry-20"), observed_at=NOW,
+        current_lap=26, gap_to_leader=Gap(laps=1),
+    )
+    assert lapped.gap_to_leader.laps == 1
+
+
 def test_model_version_records_name_version_and_config_hash():
     version = ModelVersion(model_name="pace", version="2.1.0", config_hash="sha256:abc12345")
     assert version.config_hash == "sha256:abc12345"
+
+
+def _evaluation(option_id: str) -> StrategyEvaluation:
+    return StrategyEvaluation(
+        option=StrategyOption(
+            option_id=option_id,
+            plan=StrategyPlan(actions=(StrategyAction(action_type="stay_out"),)),
+        )
+    )
+
+
+def test_recommendation_requires_unique_evaluations_and_matching_preference():
+    recommendation = DecisionRecommendation(
+        preferred_option_id="hold", evaluations=(_evaluation("hold"),), confidence="medium"
+    )
+    assert recommendation.evaluations[0].option.option_id == "hold"
+    with pytest.raises(ValidationError):
+        DecisionRecommendation(preferred_option_id="pit", evaluations=(_evaluation("hold"),), confidence="low")
+    with pytest.raises(ValidationError):
+        DecisionRecommendation(
+            preferred_option_id="hold", evaluations=(_evaluation("hold"), _evaluation("hold")), confidence="low"
+        )
+
+
+def test_position_distribution_is_non_empty_unique_and_normalised():
+    with pytest.raises(ValidationError):
+        StrategyEvaluation(option=_evaluation("hold").option, position_distribution=())
+    with pytest.raises(ValidationError):
+        StrategyEvaluation(
+            option=_evaluation("hold").option,
+            position_distribution=(
+                PositionProbability(position=5, probability=0.5),
+                PositionProbability(position=5, probability=0.5),
+            ),
+        )
+
+
+@pytest.mark.parametrize("factory", [
+    lambda: PaceEstimate(
+        value=math.nan, model_version=ModelVersion(model_name="pace", version="1", config_hash="sha256:abc12345")
+    ),
+    lambda: Gap(seconds=math.inf),
+    lambda: LapObservation(lap_number=1, lap_time_s=-math.inf, completed_at=NOW),
+    lambda: PositionProbability(position=1, probability=math.nan),
+    lambda: EmpiricalQuantiles(p10=1, p50=2, p90=math.inf, sample_count=10),
+])
+def test_non_finite_domain_numbers_are_rejected(factory):
+    with pytest.raises(ValidationError):
+        factory()
+
+
+def test_validation_result_has_typed_non_empty_metrics():
+    result = ValidationResult(
+        case_id="case-1",
+        metrics=(ValidationMetric(name="lap_time_mae", value=0.4, unit="s", sample_count=20),),
+        model_versions=(ModelVersion(model_name="pace", version="1", config_hash="sha256:abc12345"),),
+    )
+    assert result.metrics[0].unit == "s"
+    with pytest.raises(ValidationError):
+        ValidationResult(case_id="case-1", metrics=())
 
 
 def test_interfaces_import_without_infrastructure_modules():

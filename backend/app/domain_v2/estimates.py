@@ -67,14 +67,18 @@ class Uncertainty(FrozenDomainModel):
 
     @model_validator(mode="after")
     def representation_matches_kind(self):
-        if self.kind == DistributionKind.NORMAL and self.standard_deviation is None:
-            raise ValueError("normal uncertainty requires standard_deviation")
-        if self.kind == DistributionKind.QUANTILE and self.quantiles is None:
-            raise ValueError("quantile uncertainty requires empirical quantiles")
-        if self.kind == DistributionKind.BOUNDED and self.interval is None:
-            raise ValueError("bounded uncertainty requires an interval")
-        if not any((self.interval, self.quantiles, self.standard_deviation is not None)):
-            raise ValueError("uncertainty requires an explicit representation")
+        present = {
+            "interval": self.interval is not None,
+            "quantiles": self.quantiles is not None,
+            "standard_deviation": self.standard_deviation is not None,
+        }
+        required = {
+            DistributionKind.BOUNDED: "interval",
+            DistributionKind.QUANTILE: "quantiles",
+            DistributionKind.NORMAL: "standard_deviation",
+        }[self.kind]
+        if not present[required] or sum(present.values()) != 1:
+            raise ValueError(f"{self.kind.value} uncertainty requires only {required}")
         return self
 
 
