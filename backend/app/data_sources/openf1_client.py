@@ -60,6 +60,9 @@ class OpenF1Client:
         "drivers": 900,
         "laps": 300,
         "stints": 300,
+        "intervals": 180,
+        "position": 180,
+        "pit": 300,
         "weather": 180,
         "race_control": 180,
     }
@@ -197,6 +200,15 @@ class OpenF1Client:
             {"session_key": session_key},
             bypass_cache=bypass_cache,
         )
+
+    def get_intervals(self, session_key: int, *, bypass_cache: bool = False):
+        return self._get("intervals", {"session_key": session_key}, bypass_cache=bypass_cache)
+
+    def get_position(self, session_key: int, *, bypass_cache: bool = False):
+        return self._get("position", {"session_key": session_key}, bypass_cache=bypass_cache)
+
+    def get_pit(self, session_key: int, *, bypass_cache: bool = False):
+        return self._get("pit", {"session_key": session_key}, bypass_cache=bypass_cache)
 
     def get_race_control(self, session_key: int, *, bypass_cache: bool = False):
         return self._get(
