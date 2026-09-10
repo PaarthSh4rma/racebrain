@@ -11,7 +11,7 @@ export default function CarDetail({ car }: { car: CarState | null }) {
   if (car.pit_stop_count !== null) facts.push(["Pit stops", car.pit_stop_count]);
   if (car.in_pit !== null) facts.push(["In pit", car.in_pit ? "Yes" : "No"]);
   return (
-    <aside className="border border-slate-700 bg-slate-950" aria-labelledby="car-detail-heading">
+    <aside className="border border-slate-700 bg-slate-950 xl:sticky xl:top-4 xl:self-start" aria-labelledby="car-detail-heading">
       <header className="border-b border-slate-700 px-4 py-3"><p className="text-[10px] uppercase tracking-widest text-slate-500">Selected entry</p><h2 id="car-detail-heading" className="text-lg font-semibold">{car.driver_name ?? "Unknown entry"}</h2></header>
       <dl className="grid grid-cols-2 gap-px bg-slate-800">
         {facts.map(([label, value]) => <div key={String(label)} className="bg-slate-950 px-3 py-2"><dt className="text-[10px] uppercase tracking-wider text-slate-500">{label}</dt><dd className="mt-1 font-mono text-sm text-slate-100">{value ?? missing}</dd></div>)}

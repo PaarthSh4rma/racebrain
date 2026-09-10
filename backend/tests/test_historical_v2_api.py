@@ -82,13 +82,16 @@ def test_invalid_requests_and_typed_failures_are_operator_readable(monkeypatch):
 
 def test_discovery_and_reconstruction_upstream_failures_are_502(monkeypatch):
     def unavailable(*args, **kwargs):
-        raise OpenF1Error("OpenF1 race data is temporarily unavailable.")
+        raise OpenF1Error("private URL https://provider.invalid?token=secret")
 
     monkeypatch.setattr(historical_v2.client, "get_sessions", unavailable)
     discovery = api.get("/v2/historical/sessions?year=2024")
     reconstruction = api.post("/v2/historical/race-state", json={"session_key": 999, "driver_number": 16, "decision_lap": 2})
     assert discovery.status_code == reconstruction.status_code == 502
-    assert discovery.json()["detail"] == "OpenF1 race data is temporarily unavailable."
+    assert discovery.json()["detail"] == "Historical data provider is temporarily unavailable."
+    assert reconstruction.json()["detail"] == "Historical data provider is temporarily unavailable."
+    assert "provider.invalid" not in discovery.text + reconstruction.text
+    assert "secret" not in discovery.text + reconstruction.text
 
 
 def test_malformed_discovery_payload_is_safe_502(monkeypatch):
@@ -96,7 +99,22 @@ def test_malformed_discovery_payload_is_safe_502(monkeypatch):
     monkeypatch.setattr(historical_v2.client, "get_meetings", lambda **kwargs: [])
     response = api.get("/v2/historical/sessions?year=2024")
     assert response.status_code == 502
-    assert response.json()["detail"] == "OpenF1 returned malformed historical session data."
+    assert response.json()["detail"] == "Historical session data could not be loaded."
+
+
+def test_malformed_driver_and_lap_payloads_have_stable_categories(monkeypatch):
+    monkeypatch.setattr(historical_v2.client, "get_drivers", lambda *args: {"private": "driver payload"})
+    drivers = api.get("/v2/historical/sessions/999/drivers")
+    laps = api.get("/v2/historical/sessions/999/drivers/16/decision-laps")
+    assert drivers.status_code == laps.status_code == 502
+    assert drivers.json()["detail"] == "Historical driver data could not be loaded."
+    assert laps.json()["detail"] == "Historical decision-lap data could not be loaded."
+
+    install_payload(monkeypatch)
+    monkeypatch.setattr(historical_v2.client, "get_laps", lambda *args: {"private": "lap payload"})
+    laps = api.get("/v2/historical/sessions/999/drivers/16/decision-laps")
+    assert laps.status_code == 502
+    assert laps.json()["detail"] == "Historical decision-lap data could not be loaded."
 
 
 def test_unexpected_reconstruction_failure_is_sanitized(monkeypatch):

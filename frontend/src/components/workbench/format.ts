@@ -15,6 +15,13 @@ export function formatUtc(value: string | null | undefined): string {
   return Number.isNaN(date.getTime()) ? missing : `${date.toISOString().replace("T", " ").replace(".000Z", "Z")} UTC`;
 }
 
+export function formatUtcTime(value: string | null | undefined): string {
+  if (!value) return missing;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return missing;
+  return `${date.toISOString().slice(11, 23)} UTC`;
+}
+
 export function formatNumber(value: number | null, suffix = ""): string {
   return value === null ? missing : `${value}${suffix}`;
 }

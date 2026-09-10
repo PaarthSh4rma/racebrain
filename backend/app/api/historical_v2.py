@@ -14,6 +14,12 @@ router = APIRouter(prefix="/v2/historical", tags=["V2 Historical Race State"])
 client = OpenF1Client()
 logger = logging.getLogger("racebrain.historical_v2")
 
+PROVIDER_UNAVAILABLE = "Historical data provider is temporarily unavailable."
+SESSION_LOAD_FAILED = "Historical session data could not be loaded."
+DRIVER_LOAD_FAILED = "Historical driver data could not be loaded."
+LAP_LOAD_FAILED = "Historical decision-lap data could not be loaded."
+RECONSTRUCTION_FAILED = "Historical race state could not be reconstructed."
+
 
 def _failure(exc: ReconstructionFailure) -> HTTPException:
     message = str(exc)
@@ -29,9 +35,11 @@ def list_historical_sessions(year: int = Query(ge=2018, le=2100)):
     try:
         return discover_race_sessions(year, client)
     except OpenF1Error as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        logger.warning("historical data provider unavailable during session discovery", exc_info=True)
+        raise HTTPException(status_code=502, detail=PROVIDER_UNAVAILABLE) from exc
     except HistoricalDiscoveryError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        logger.warning("historical session discovery payload unusable", exc_info=True)
+        raise HTTPException(status_code=502, detail=SESSION_LOAD_FAILED) from exc
     except Exception as exc:
         logger.exception("historical session discovery failed")
         raise HTTPException(status_code=500, detail="Historical session discovery failed safely.") from exc
@@ -42,9 +50,11 @@ def list_historical_drivers(session_key: int = Path(gt=0)):
     try:
         return discover_session_drivers(session_key, client)
     except OpenF1Error as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        logger.warning("historical data provider unavailable during driver discovery", exc_info=True)
+        raise HTTPException(status_code=502, detail=PROVIDER_UNAVAILABLE) from exc
     except HistoricalDiscoveryError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        logger.warning("historical driver discovery payload unusable", exc_info=True)
+        raise HTTPException(status_code=502, detail=DRIVER_LOAD_FAILED) from exc
     except Exception as exc:
         logger.exception("historical driver discovery failed")
         raise HTTPException(status_code=500, detail="Historical driver discovery failed safely.") from exc
@@ -60,9 +70,11 @@ def list_historical_decision_laps(session_key: int = Path(gt=0), driver_number: 
     except ReconstructionFailure as exc:
         raise _failure(exc) from exc
     except OpenF1Error as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        logger.warning("historical data provider unavailable during lap discovery", exc_info=True)
+        raise HTTPException(status_code=502, detail=PROVIDER_UNAVAILABLE) from exc
     except HistoricalDiscoveryError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        logger.warning("historical lap discovery payload unusable", exc_info=True)
+        raise HTTPException(status_code=502, detail=LAP_LOAD_FAILED) from exc
     except HTTPException:
         raise
     except Exception as exc:
@@ -85,7 +97,8 @@ def historical_race_state(request: HistoricalRaceStateApiRequest):
     except ReconstructionFailure as exc:
         raise _failure(exc) from exc
     except OpenF1Error as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        logger.warning("historical data provider unavailable during reconstruction", exc_info=True)
+        raise HTTPException(status_code=502, detail=PROVIDER_UNAVAILABLE) from exc
     except Exception as exc:
         logger.exception("historical reconstruction failed")
-        raise HTTPException(status_code=500, detail="Historical race state could not be reconstructed.") from exc
+        raise HTTPException(status_code=500, detail=RECONSTRUCTION_FAILED) from exc
