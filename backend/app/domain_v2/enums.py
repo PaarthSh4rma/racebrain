@@ -45,6 +45,34 @@ class DistributionKind(StrEnum):
     BOUNDED = "bounded"
 
 
+class LapAdmissionRejectionReason(StrEnum):
+    """Provider lap rows rejected before canonical modelling admission."""
+
+    MISSING_TIMING = "missing_timing"
+    INVALID_DURATION = "invalid_duration"
+
+
+class LapExclusionReason(StrEnum):
+    """Observed conditions that are hard exclusions from a pace fit."""
+
+    LAP_ONE = "lap_one"
+    PIT_OUT = "pit_out"
+    PIT_LANE_AFFECTED = "pit_lane_affected"
+    SAFETY_CAR = "safety_car"
+    VSC = "virtual_safety_car"
+    RED_FLAG = "red_flag"
+    GLOBAL_YELLOW = "global_yellow"
+    INSUFFICIENT_CONTEXT = "insufficient_context"
+
+
+class LapQualityWarning(StrEnum):
+    """Suspected contamination that is not represented as observed fact."""
+
+    WEATHER_TRANSITION = "weather_transition"
+    TRAFFIC_SUSPECTED = "traffic_suspected"
+    EXTREME_OUTLIER = "extreme_outlier"
+
+
 class TriggerMetric(StrEnum):
     GAP_AHEAD_S = "gap_ahead_s"
     GAP_BEHIND_S = "gap_behind_s"
