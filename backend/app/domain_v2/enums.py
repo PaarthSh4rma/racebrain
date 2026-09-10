@@ -45,6 +45,34 @@ class DistributionKind(StrEnum):
     BOUNDED = "bounded"
 
 
+class PaceEstimateKind(StrEnum):
+    REPRESENTATIVE_CLEAN_LAP_TIME = "representative_clean_lap_time"
+    RELATIVE_TO_REFERENCE = "relative_to_reference"
+
+
+class LapExclusionReason(StrEnum):
+    """Observed conditions that are hard exclusions from a pace fit."""
+
+    LAP_ONE = "lap_one"
+    PIT_OUT = "pit_out"
+    PIT_LANE_AFFECTED = "pit_lane_affected"
+    SAFETY_CAR = "safety_car"
+    VSC = "virtual_safety_car"
+    RED_FLAG = "red_flag"
+    GLOBAL_YELLOW = "global_yellow"
+    INVALID_DURATION = "invalid_duration"
+    MISSING_TIMING = "missing_timing"
+    INSUFFICIENT_CONTEXT = "insufficient_context"
+
+
+class LapQualityWarning(StrEnum):
+    """Suspected contamination that is not represented as observed fact."""
+
+    WEATHER_TRANSITION = "weather_transition"
+    TRAFFIC_SUSPECTED = "traffic_suspected"
+    EXTREME_OUTLIER = "extreme_outlier"
+
+
 class TriggerMetric(StrEnum):
     GAP_AHEAD_S = "gap_ahead_s"
     GAP_BEHIND_S = "gap_behind_s"

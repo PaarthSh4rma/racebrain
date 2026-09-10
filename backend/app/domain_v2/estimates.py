@@ -1,10 +1,12 @@
 """Explicit numerical estimate semantics and units."""
 
+from datetime import datetime, timezone
+
 from pydantic import Field, model_validator
 
 from .base import FrozenDomainModel
-from .enums import ConfidenceLevel, DistributionKind
-from .provenance import Provenance
+from .enums import ConfidenceLevel, DistributionKind, PaceEstimateKind, TyreCompound
+from .provenance import DataQuality, Provenance
 from .identity import CompetitorId
 from .timing import Gap
 
@@ -93,12 +95,76 @@ class ModelEstimate(FrozenDomainModel):
     provenance: tuple[Provenance, ...] = ()
 
 
+class EvidenceWindow(FrozenDomainModel):
+    started_at: datetime
+    ended_at: datetime
+    first_lap: int = Field(ge=1)
+    last_lap: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def window_is_ordered(self):
+        self._utc(self.started_at, "started_at")
+        self._utc(self.ended_at, "ended_at")
+        if self.started_at > self.ended_at or self.first_lap > self.last_lap:
+            raise ValueError("evidence window must be chronologically ordered")
+        return self
+
+    @staticmethod
+    def _utc(value: datetime, name: str) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError(f"{name} must be a usable timezone-aware timestamp")
+        return value.astimezone(timezone.utc)
+
+
 class PaceEstimate(ModelEstimate):
     unit: str = Field(default="s/lap", pattern=r"^s/lap$")
+    competitor_id: CompetitorId
+    as_of: datetime
+    meaning: PaceEstimateKind
+    reference: str | None = Field(default=None, min_length=1)
+    sample_count: int = Field(ge=1)
+    evidence_window: EvidenceWindow
+    data_quality: DataQuality = DataQuality()
+    limitations: tuple[str, ...] = ()
+
+    @model_validator(mode="after")
+    def reference_matches_meaning(self):
+        if self.as_of.tzinfo is None or self.as_of.utcoffset() is None:
+            raise ValueError("as_of must be a usable timezone-aware timestamp")
+        if self.evidence_window.ended_at > self.as_of:
+            raise ValueError("pace evidence cannot postdate the estimate cutoff")
+        relative = self.meaning is PaceEstimateKind.RELATIVE_TO_REFERENCE
+        if relative != (self.reference is not None):
+            raise ValueError("relative pace requires one explicit reference; absolute pace forbids one")
+        return self
 
 
-class DegradationEstimate(ModelEstimate):
+class TyreDegradationEstimate(ModelEstimate):
     unit: str = Field(default="s/lap/lap", pattern=r"^s/lap/lap$")
+    competitor_id: CompetitorId
+    as_of: datetime
+    compound: TyreCompound
+    stint_number: int | None = Field(default=None, ge=1)
+    minimum_tyre_age_laps: int = Field(ge=0)
+    maximum_tyre_age_laps: int = Field(ge=0)
+    sample_count: int = Field(ge=2)
+    evidence_window: EvidenceWindow
+    data_quality: DataQuality = DataQuality()
+    limitations: tuple[str, ...] = ()
+
+    @model_validator(mode="after")
+    def degradation_evidence_is_bounded(self):
+        if self.as_of.tzinfo is None or self.as_of.utcoffset() is None:
+            raise ValueError("as_of must be a usable timezone-aware timestamp")
+        if self.minimum_tyre_age_laps > self.maximum_tyre_age_laps:
+            raise ValueError("tyre-age range must be ordered")
+        if self.evidence_window.ended_at > self.as_of:
+            raise ValueError("degradation evidence cannot postdate the estimate cutoff")
+        return self
+
+
+# Retain the architecture-foundation name for existing imports.
+DegradationEstimate = TyreDegradationEstimate
 
 
 class PitLossEstimate(ModelEstimate):
