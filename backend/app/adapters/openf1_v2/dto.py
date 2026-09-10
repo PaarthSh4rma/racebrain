@@ -37,6 +37,15 @@ class SessionDTO(OpenF1DTO):
     session_type: str | None = None
 
 
+class MeetingDTO(OpenF1DTO):
+    meeting_key: int | None = None
+    year: int | None = None
+    meeting_name: str | None = None
+    country_name: str | None = None
+    location: str | None = None
+    circuit_short_name: str | None = None
+
+
 class DriverDTO(OpenF1DTO):
     session_key: int | None = None
     driver_number: int | None = None
@@ -81,6 +90,14 @@ class PositionDTO(DatedDTO):
     driver_number: int | None = None
     position: int | None = None
 
+    @field_validator("position", mode="before")
+    @classmethod
+    def position_is_whole_not_boolean(cls, value: Any) -> Any:
+        value = empty_to_none(value)
+        if isinstance(value, bool) or isinstance(value, float) and not value.is_integer():
+            raise ValueError("position must be a positive whole-number candidate")
+        return value
+
 
 class PitDTO(DatedDTO):
     session_key: int | None = None
@@ -96,7 +113,7 @@ class WeatherDTO(DatedDTO):
     track_temperature: float | None = None
     humidity: float | None = None
     wind_speed: float | None = None
-    rainfall: bool | int | None = None
+    rainfall: Any = None
 
 
 class RaceControlDTO(DatedDTO):

@@ -15,8 +15,8 @@ def _opaque(kind: str, natural_key: str) -> str:
     return f"{kind}:{uuid5(RACEBRAIN_ID_NAMESPACE_V1, f'v1|{kind}|{natural_key}')}"
 
 
-def event_id(year: int, place: str, race_name: str) -> EventId:
-    return EventId(_opaque("event", canonicalize("f1", year, place, race_name)))
+def event_id(year: int, meeting_name: str, country_name: str, location: str, circuit_name: str) -> EventId:
+    return EventId(_opaque("event", canonicalize("f1", year, meeting_name, country_name, location, circuit_name)))
 
 
 def session_id(event: EventId, session_type: str, session_name: str) -> SessionId:

@@ -2,6 +2,7 @@
 
 import re
 from datetime import datetime, timezone
+from math import isfinite
 from typing import Any
 
 from app.domain_v2.timing import Gap
@@ -39,6 +40,6 @@ def parse_gap(value: Any) -> Gap | None:
             return Gap(laps=laps) if laps > 0 else None
     try:
         seconds = float(value)
-        return Gap(seconds=seconds) if seconds >= 0 else None
+        return Gap(seconds=seconds) if isfinite(seconds) and seconds >= 0 else None
     except (TypeError, ValueError):
         return None

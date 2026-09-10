@@ -4,6 +4,7 @@
 def historical_payload(session_key=999):
     return {
         "sessions": [{"session_key": session_key, "meeting_key": 88, "year": 2024, "country_name": "Monaco", "location": "Monte Carlo", "circuit_short_name": "Monaco", "session_name": "Race", "session_type": "Race", "irrelevant": "ignored"}],
+        "meetings": [{"meeting_key": 88, "year": 2024, "meeting_name": "Monaco Grand Prix", "country_name": "Monaco", "location": "Monaco", "circuit_short_name": "Monte Carlo"}],
         "drivers": [
             {"session_key": session_key, "driver_number": 16, "full_name": "Charles Leclerc"},
             {"session_key": session_key, "driver_number": 4, "full_name": "Lando Norris"},
@@ -34,8 +35,8 @@ def historical_payload(session_key=999):
             {"session_key": session_key, "date": "2024-05-26T13:03:00Z", "air_temperature": 5.0, "humidity": 99.0, "rainfall": 1},
         ],
         "race_control": [
-            {"session_key": session_key, "date": "2024-05-26T13:00:10Z", "category": "Flag", "flag": "GREEN", "message": "GREEN LIGHT - PIT EXIT OPEN"},
-            {"session_key": session_key, "date": "2024-05-26T13:03:00Z", "category": "SafetyCar", "message": "SAFETY CAR DEPLOYED"},
+            {"session_key": session_key, "date": "2024-05-26T13:00:10Z", "category": "SessionStatus", "message": "SESSION STARTED"},
+            {"session_key": session_key, "date": "2024-05-26T13:03:00Z", "category": "SafetyCar", "scope": "Track", "message": "SAFETY CAR DEPLOYED"},
         ],
     }
 
@@ -51,6 +52,7 @@ class RecordingOpenF1Client:
         return self.payload[name]
 
     def get_sessions(self, **_): return self._take("sessions")
+    def get_meetings(self, *_): return self._take("meetings")
     def get_drivers(self, *_): return self._take("drivers")
     def get_laps(self, *_): return self._take("laps")
     def get_stints(self, *_): return self._take("stints")

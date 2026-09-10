@@ -57,6 +57,7 @@ class MemoryTTLCache:
 class OpenF1Client:
     TTL_BY_ENDPOINT = {
         "sessions": 900,
+        "meetings": 900,
         "drivers": 900,
         "laps": 300,
         "stints": 300,
@@ -181,6 +182,9 @@ class OpenF1Client:
         if driver_number:
             params["driver_number"] = driver_number
         return self._get("laps", params, bypass_cache=bypass_cache)
+
+    def get_meetings(self, meeting_key: int, *, bypass_cache: bool = False):
+        return self._get("meetings", {"meeting_key": meeting_key}, bypass_cache=bypass_cache)
 
     def get_stints(
         self,
