@@ -8,8 +8,13 @@ import RaceEngineerPanel from "./components/ai/RaceEngineerPanel";
 import ReplayPanel from "./components/replay/ReplayPanel";
 import { getTrackProfile, getTrackProfiles, runMonteCarloSimulation } from "./api/racebrain";
 import type { SimulationInputs, SimulationResult, TrackProfile } from "./types/racebrain";
+import WorkbenchPage from "./components/workbench/WorkbenchPage";
 
 export default function App() {
+  return window.location.pathname.replace(/\/$/, "") === "/workbench" ? <WorkbenchPage /> : <LegacyApp />;
+}
+
+function LegacyApp() {
   const [track, setTrack] = useState("monaco");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SimulationResult | null>(null);
@@ -97,8 +102,11 @@ export default function App() {
             </h1>
           </div>
 
-          <div className="max-w-full self-start break-words rounded-full border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-bold text-red-300 sm:self-auto">
-            {selectedTrackName}
+          <div className="flex items-center gap-3 self-start sm:self-auto">
+            <a href="/workbench" className="rounded-full border border-cyan-500/40 px-4 py-2 text-xs font-bold uppercase tracking-wider text-cyan-300">Historical workbench</a>
+            <div className="max-w-full break-words rounded-full border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-bold text-red-300">
+              {selectedTrackName}
+            </div>
           </div>
         </nav>
         <motion.div
