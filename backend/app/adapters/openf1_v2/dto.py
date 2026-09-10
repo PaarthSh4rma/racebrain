@@ -52,6 +52,9 @@ class DriverDTO(OpenF1DTO):
     full_name: str | None = None
     first_name: str | None = None
     last_name: str | None = None
+    broadcast_name: str | None = None
+    name_acronym: str | None = None
+    team_name: str | None = None
 
 
 class LapDTO(OpenF1DTO):

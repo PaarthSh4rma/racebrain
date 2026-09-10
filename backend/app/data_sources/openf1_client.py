@@ -183,8 +183,19 @@ class OpenF1Client:
             params["driver_number"] = driver_number
         return self._get("laps", params, bypass_cache=bypass_cache)
 
-    def get_meetings(self, meeting_key: int, *, bypass_cache: bool = False):
-        return self._get("meetings", {"meeting_key": meeting_key}, bypass_cache=bypass_cache)
+    def get_meetings(
+        self,
+        meeting_key: int | None = None,
+        year: int | None = None,
+        *,
+        bypass_cache: bool = False,
+    ):
+        params = {}
+        if meeting_key is not None:
+            params["meeting_key"] = meeting_key
+        if year is not None:
+            params["year"] = year
+        return self._get("meetings", params, bypass_cache=bypass_cache)
 
     def get_stints(
         self,
