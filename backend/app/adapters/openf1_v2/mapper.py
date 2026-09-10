@@ -288,6 +288,9 @@ def reconstruct(dataset: OpenF1Dataset, session_key: int, focal_driver_number: i
         position = _latest_position(dataset.positions.records, number, cutoff, diagnostics)
         interval_row = _latest_interval(dataset.intervals.records, number, cutoff, position is not None and position.position == 1, diagnostics)
         interval, gap_ahead, gap_leader = (interval_row[2], interval_row[3], interval_row[4]) if interval_row else (None, None, None)
+        is_leader = position is not None and position.position == 1
+        if is_leader and interval is not None:
+            gap_ahead = None
         pits = {(p.date, _stable_record_key(p)): p for p in dataset.pits.records if p.driver_number == number and p.date is not None and p.date <= cutoff}
         diagnostics.duplicate_records += sum(1 for p in dataset.pits.records if p.driver_number == number and p.date is not None and p.date <= cutoff) - len(pits)
         pit_records = tuple(pits.values())
@@ -312,7 +315,10 @@ def reconstruct(dataset: OpenF1Dataset, session_key: int, focal_driver_number: i
         if position:
             provenance.append(_source("position", position.date, session_key, "latest record at or before cutoff"))
         if interval:
-            provenance.append(_source("intervals", interval.date, session_key, "seconds or lapped interval parsed to canonical Gap"))
+            interval_transform = "latest usable bounded interval mapped to canonical gaps"
+            if is_leader:
+                interval_transform += "; leader gap_ahead normalized to missing because no competitor is ahead"
+            provenance.append(_source("intervals", interval.date, session_key, interval_transform))
         if pit_records:
             provenance.append(_source("pit", max(p.date for p in pit_records), session_key, "timestamp-bounded pit-lane passage observed; stop semantics not inferred"))
         cars.append(CarState(

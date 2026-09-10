@@ -22,7 +22,7 @@ def historical_payload(session_key=999):
             {"session_key": session_key, "driver_number": 4, "stint_number": 1, "lap_start": 1, "lap_end": 78, "compound": "HARD", "tyre_age_at_start": 1},
         ],
         "intervals": [
-            {"session_key": session_key, "driver_number": 16, "date": "2024-05-26T13:01:59Z", "interval": None, "gap_to_leader": None},
+            {"session_key": session_key, "driver_number": 16, "date": "2024-05-26T13:01:59Z", "interval": 0.0, "gap_to_leader": 0.0},
             {"session_key": session_key, "driver_number": 4, "date": "2024-05-26T13:01:58Z", "interval": 1.25, "gap_to_leader": "+1 LAP"},
         ],
         "positions": [

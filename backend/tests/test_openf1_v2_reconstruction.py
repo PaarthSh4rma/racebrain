@@ -29,7 +29,9 @@ def test_full_field_cutoff_and_mapping():
     assert len(state.competitors) == 2
     assert [by_number(state, n).current_lap for n in (16, 4)] == [2, 1]
     assert by_number(state, 16).position == 1
-    assert by_number(state, 16).gap_to_leader is None
+    assert by_number(state, 16).gap_ahead is None
+    assert by_number(state, 16).gap_to_leader.seconds == 0.0
+    assert "interval" not in by_number(state, 16).data_quality.missing_fields
     assert by_number(state, 4).gap_ahead.seconds == 1.25
     assert by_number(state, 4).gap_to_leader.laps == 1
     assert by_number(state, 4).gap_behind is None
@@ -206,6 +208,15 @@ def test_invalid_latest_interval_falls_back_and_nonleader_null_is_missing():
     payload["intervals"] = [{"driver_number": 4, "date": "2024-05-26T13:01:59Z", "interval": None, "gap_to_leader": "bad"}]
     car = by_number(build(payload)[0].race_state, 4)
     assert car.gap_ahead is None and "interval" in car.data_quality.missing_fields
+
+
+def test_nonleader_zero_interval_is_preserved():
+    payload = historical_payload()
+    payload["intervals"][1]["interval"] = 0.0
+    car = by_number(build(payload)[0].race_state, 4)
+    assert car.position == 2
+    assert car.gap_ahead.seconds == 0.0
+    assert "interval" not in car.data_quality.missing_fields
 
 
 @pytest.mark.parametrize("duration", [float("nan"), float("inf"), float("-inf"), 0, -1])
