@@ -8,7 +8,7 @@ from pydantic import Field, field_validator, model_validator
 
 from .base import FrozenDomainModel
 from .enums import LapExclusionReason, LapQualityWarning, TrackStatus, TyreCompound
-from .estimates import ModelVersion
+from .estimates import ModelVersion, _provenance_is_bounded
 from .identity import CompetitorId
 from .provenance import DataQuality, Provenance
 from .race_state import RaceState, WeatherState
@@ -158,6 +158,7 @@ class FitDiagnostics(FrozenDomainModel):
     def counts_reconcile(self):
         if self.included_laps + self.excluded_laps != self.candidate_laps:
             raise ValueError("included and excluded lap counts must equal candidate laps")
+        _provenance_is_bounded(self.provenance, self.as_of, "fit diagnostics")
         return self
 
 

@@ -222,3 +222,24 @@ def test_fit_diagnostics_counts_are_consistent_and_no_confidence_is_fabricated()
     assert "confidence" not in FitDiagnostics.model_fields
     with pytest.raises(ValidationError):
         FitDiagnostics(**(diagnostics.model_dump() | {"excluded_laps": 2}))
+
+
+def test_fit_diagnostics_bounds_source_observation_but_not_retrieval_time():
+    observed = NOW - timedelta(seconds=1)
+    retrieved = NOW + timedelta(days=30)
+    valid = FitDiagnostics(
+        competitor_id=COMPETITOR,
+        as_of=NOW,
+        candidate_laps=1,
+        included_laps=1,
+        excluded_laps=0,
+        model_version=CONFIG.version(),
+        provenance=(Provenance(source="archive", observed_at=observed, retrieved_at=retrieved),),
+    )
+    assert valid.provenance[0].observed_at <= valid.as_of
+    assert valid.provenance[0].retrieved_at > valid.as_of
+    with pytest.raises(ValidationError):
+        FitDiagnostics(**(
+            valid.model_dump()
+            | {"provenance": (Provenance(source="future", observed_at=NOW + timedelta(seconds=1)),)}
+        ))
