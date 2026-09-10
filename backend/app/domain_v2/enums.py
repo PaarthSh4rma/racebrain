@@ -45,9 +45,11 @@ class DistributionKind(StrEnum):
     BOUNDED = "bounded"
 
 
-class PaceEstimateKind(StrEnum):
-    REPRESENTATIVE_CLEAN_LAP_TIME = "representative_clean_lap_time"
-    RELATIVE_TO_REFERENCE = "relative_to_reference"
+class LapAdmissionRejectionReason(StrEnum):
+    """Provider lap rows rejected before canonical modelling admission."""
+
+    MISSING_TIMING = "missing_timing"
+    INVALID_DURATION = "invalid_duration"
 
 
 class LapExclusionReason(StrEnum):
@@ -60,8 +62,6 @@ class LapExclusionReason(StrEnum):
     VSC = "virtual_safety_car"
     RED_FLAG = "red_flag"
     GLOBAL_YELLOW = "global_yellow"
-    INVALID_DURATION = "invalid_duration"
-    MISSING_TIMING = "missing_timing"
     INSUFFICIENT_CONTEXT = "insufficient_context"
 
 

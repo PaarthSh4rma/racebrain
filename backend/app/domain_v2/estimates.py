@@ -2,10 +2,10 @@
 
 from datetime import datetime, timezone
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from .base import FrozenDomainModel
-from .enums import ConfidenceLevel, DistributionKind, PaceEstimateKind, TyreCompound
+from .enums import ConfidenceLevel, DistributionKind, TyreCompound
 from .provenance import DataQuality, Provenance
 from .identity import CompetitorId
 from .timing import Gap
@@ -101,41 +101,39 @@ class EvidenceWindow(FrozenDomainModel):
     first_lap: int = Field(ge=1)
     last_lap: int = Field(ge=1)
 
+    @field_validator("started_at", "ended_at")
+    @classmethod
+    def timestamps_are_utc(cls, value: datetime, info) -> datetime:
+        return _as_utc(value, info.field_name)
+
     @model_validator(mode="after")
     def window_is_ordered(self):
-        self._utc(self.started_at, "started_at")
-        self._utc(self.ended_at, "ended_at")
         if self.started_at > self.ended_at or self.first_lap > self.last_lap:
             raise ValueError("evidence window must be chronologically ordered")
         return self
-
-    @staticmethod
-    def _utc(value: datetime, name: str) -> datetime:
-        if value.tzinfo is None or value.utcoffset() is None:
-            raise ValueError(f"{name} must be a usable timezone-aware timestamp")
-        return value.astimezone(timezone.utc)
 
 
 class PaceEstimate(ModelEstimate):
     unit: str = Field(default="s/lap", pattern=r"^s/lap$")
     competitor_id: CompetitorId
     as_of: datetime
-    meaning: PaceEstimateKind
-    reference: str | None = Field(default=None, min_length=1)
     sample_count: int = Field(ge=1)
     evidence_window: EvidenceWindow
     data_quality: DataQuality = DataQuality()
     limitations: tuple[str, ...] = ()
 
+    @field_validator("as_of")
+    @classmethod
+    def cutoff_is_utc(cls, value: datetime) -> datetime:
+        return _as_utc(value, "as_of")
+
     @model_validator(mode="after")
-    def reference_matches_meaning(self):
-        if self.as_of.tzinfo is None or self.as_of.utcoffset() is None:
-            raise ValueError("as_of must be a usable timezone-aware timestamp")
+    def representative_pace_is_bounded(self):
+        if self.value <= 0:
+            raise ValueError("representative clean-lap pace must be strictly positive")
         if self.evidence_window.ended_at > self.as_of:
             raise ValueError("pace evidence cannot postdate the estimate cutoff")
-        relative = self.meaning is PaceEstimateKind.RELATIVE_TO_REFERENCE
-        if relative != (self.reference is not None):
-            raise ValueError("relative pace requires one explicit reference; absolute pace forbids one")
+        _provenance_is_bounded(self.provenance, self.as_of, "pace estimate")
         return self
 
 
@@ -152,14 +150,18 @@ class TyreDegradationEstimate(ModelEstimate):
     data_quality: DataQuality = DataQuality()
     limitations: tuple[str, ...] = ()
 
+    @field_validator("as_of")
+    @classmethod
+    def cutoff_is_utc(cls, value: datetime) -> datetime:
+        return _as_utc(value, "as_of")
+
     @model_validator(mode="after")
     def degradation_evidence_is_bounded(self):
-        if self.as_of.tzinfo is None or self.as_of.utcoffset() is None:
-            raise ValueError("as_of must be a usable timezone-aware timestamp")
-        if self.minimum_tyre_age_laps > self.maximum_tyre_age_laps:
-            raise ValueError("tyre-age range must be ordered")
+        if self.minimum_tyre_age_laps >= self.maximum_tyre_age_laps:
+            raise ValueError("tyre-age slope requires a strictly positive age span")
         if self.evidence_window.ended_at > self.as_of:
             raise ValueError("degradation evidence cannot postdate the estimate cutoff")
+        _provenance_is_bounded(self.provenance, self.as_of, "tyre degradation estimate")
         return self
 
 
@@ -186,3 +188,14 @@ class RejoinEstimate(FrozenDomainModel):
     model_version: ModelVersion
     assumptions: tuple[str, ...] = ()
     provenance: tuple[Provenance, ...] = ()
+
+
+def _as_utc(value: datetime, name: str) -> datetime:
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError(f"{name} must be a usable timezone-aware timestamp")
+    return value.astimezone(timezone.utc)
+
+
+def _provenance_is_bounded(items: tuple[Provenance, ...], cutoff: datetime, owner: str) -> None:
+    if any(item.observed_at is not None and item.observed_at > cutoff for item in items):
+        raise ValueError(f"{owner} provenance cannot contain source observations after its cutoff")

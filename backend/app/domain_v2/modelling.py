@@ -67,6 +67,18 @@ class ModellingLapObservation(FrozenDomainModel):
             raise ValueError("gap evidence aligned to a lap cannot postdate its completion")
         if self.track_status is not None and self.track_status.observed_at > self.completed_at:
             raise ValueError("track status aligned to a lap cannot postdate its completion")
+        provenance_groups = (
+            self.provenance,
+            self.gap_evidence.provenance if self.gap_evidence is not None else (),
+            self.track_status.provenance if self.track_status is not None else (),
+            self.weather.provenance if self.weather is not None else (),
+        )
+        if any(
+            item.observed_at is not None and item.observed_at > self.completed_at
+            for group in provenance_groups
+            for item in group
+        ):
+            raise ValueError("lap evidence provenance cannot postdate lap completion")
         if len(set(self.hard_exclusions)) != len(self.hard_exclusions):
             raise ValueError("hard exclusions must be unique")
         if len(set(self.quality_warnings)) != len(self.quality_warnings):
@@ -104,6 +116,8 @@ class PaceEstimationContext(FrozenDomainModel):
             raise ValueError("modelling observations must be unique by competitor and lap")
         if tuple(keys) != tuple(sorted(keys, key=lambda item: (str(item[0]), item[1]))):
             raise ValueError("modelling observations require deterministic competitor/lap ordering")
+        if any(item.observed_at is not None and item.observed_at > self.as_of for item in self.provenance):
+            raise ValueError("context provenance cannot contain source observations after its cutoff")
         return self
 
 
