@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone, tzinfo
 import math
+import inspect
+from typing import get_args, get_origin
 import ast
 from pathlib import Path
 
@@ -8,6 +10,7 @@ from pydantic import ValidationError
 
 from app.domain_v2.enums import (
     DistributionKind,
+    ConfidenceLevel,
     StrategyActionType,
     TriggerMetric,
     TriggerOperator,
@@ -18,6 +21,8 @@ from app.domain_v2.estimates import (
     EmpiricalQuantiles,
     ModelVersion,
     PaceEstimate,
+    RaceTimeDeltaEstimate,
+    RejoinEstimate,
     ScenarioFrequency,
     StatisticalInterval,
     Uncertainty,
@@ -25,9 +30,10 @@ from app.domain_v2.estimates import (
 from app.domain_v2.identity import CompetitorId, EventId, SessionId
 from app.domain_v2.provenance import ExternalIdentifier
 from app.domain_v2.race_state import (
-    CarState, Event, Gap, LapObservation, RaceState, Session,
+    CarState, Event, LapObservation, RaceState, Session,
     TrackStatusState, WeatherState,
 )
+from app.domain_v2.timing import Gap
 from app.domain_v2.strategy import (
     DecisionTrigger,
     DecisionRecommendation,
@@ -43,6 +49,7 @@ from app.domain_v2.validation import ValidationMetric, ValidationResult
 
 
 NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
+OUR_COMPETITOR = CompetitorId("entry-5")
 
 
 def state(**updates):
@@ -142,7 +149,13 @@ def test_scenario_frequency_is_descriptive_and_not_probability_named():
 def test_probabilities_are_bounded_and_distribution_sums_to_one():
     with pytest.raises(ValidationError):
         PositionProbability(position=5, probability=1.1)
-    option = StrategyOption(option_id="hold", plan=StrategyPlan(actions=(StrategyAction(action_type="stay_out"),)))
+    option = StrategyOption(
+        option_id="hold",
+        plan=StrategyPlan(
+            competitor_id=OUR_COMPETITOR,
+            actions=(StrategyAction(action_type=StrategyActionType.STAY_OUT),),
+        ),
+    )
     with pytest.raises(ValidationError):
         StrategyEvaluation(
             option=option,
@@ -159,18 +172,20 @@ def test_strategy_action_rejects_contradictory_fields():
 
 def test_decision_trigger_has_closed_operator_vocabulary():
     trigger = DecisionTrigger(
+        target_competitor_id=OUR_COMPETITOR,
         operand=MetricRef(metric=TriggerMetric.GAP_BEHIND_S, subject=CompetitorId("entry-5")),
         operator=TriggerOperator.GT,
         threshold=2.4,
-        action=StrategyAction(action_type="pit_now", compound="hard"),
+        action=StrategyAction(action_type=StrategyActionType.PIT_NOW, compound=TyreCompound.HARD),
     )
     assert trigger.operator is TriggerOperator.GT
     with pytest.raises(ValidationError):
         DecisionTrigger(
+            target_competitor_id=OUR_COMPETITOR,
             operand=MetricRef(metric=TriggerMetric.GAP_BEHIND_S),
             operator="approximately",
             threshold=2.4,
-            action=StrategyAction(action_type="stay_out"),
+            action=StrategyAction(action_type=StrategyActionType.STAY_OUT),
         )
 
 
@@ -215,16 +230,18 @@ def test_subject_and_relative_trigger_rules_are_enforced():
 def test_track_status_trigger_rejects_incompatible_operator_or_threshold(operator, threshold):
     with pytest.raises(ValidationError):
         DecisionTrigger(
+            target_competitor_id=OUR_COMPETITOR,
             operand=MetricRef(metric=TriggerMetric.TRACK_STATUS), operator=operator,
-            threshold=threshold, action=StrategyAction(action_type="stay_out"),
+            threshold=threshold, action=StrategyAction(action_type=StrategyActionType.STAY_OUT),
         )
 
 
 def test_track_status_trigger_accepts_typed_transition():
     trigger = DecisionTrigger(
+        target_competitor_id=OUR_COMPETITOR,
         operand=MetricRef(metric=TriggerMetric.TRACK_STATUS),
         operator=TriggerOperator.CHANGES_TO, threshold=TrackStatus.VSC,
-        action=StrategyAction(action_type="pit_now"),
+        action=StrategyAction(action_type=StrategyActionType.PIT_NOW),
     )
     assert trigger.threshold is TrackStatus.VSC
 
@@ -233,17 +250,19 @@ def test_track_status_trigger_accepts_typed_transition():
 def test_numeric_trigger_rejects_string_and_bool(threshold):
     with pytest.raises(ValidationError):
         DecisionTrigger(
+            target_competitor_id=OUR_COMPETITOR,
             operand=MetricRef(metric=TriggerMetric.PIT_LOSS_S), operator=TriggerOperator.GT,
-            threshold=threshold, action=StrategyAction(action_type="stay_out"),
+            threshold=threshold, action=StrategyAction(action_type=StrategyActionType.STAY_OUT),
         )
 
 
 def test_numeric_trigger_rejects_changes_to():
     with pytest.raises(ValidationError):
         DecisionTrigger(
+            target_competitor_id=OUR_COMPETITOR,
             operand=MetricRef(metric=TriggerMetric.PIT_LOSS_S),
             operator=TriggerOperator.CHANGES_TO, threshold=2.5,
-            action=StrategyAction(action_type="stay_out"),
+            action=StrategyAction(action_type=StrategyActionType.STAY_OUT),
         )
 
 
@@ -315,6 +334,24 @@ def test_gap_supports_seconds_and_lapped_competitor():
     assert lapped.gap_to_leader.laps == 1
 
 
+@pytest.mark.parametrize("payload", [
+    {"laps": True}, {"laps": "1"}, {"laps": 1.0}, {"seconds": "2.4"},
+])
+def test_gap_rejects_transport_coercion(payload):
+    with pytest.raises(ValidationError):
+        Gap(**payload)
+
+
+def test_rejoin_uses_shared_seconds_and_lap_gap_contract():
+    version = ModelVersion(model_name="rejoin", version="1", config_hash="sha256:abc12345")
+    seconds = RejoinEstimate(
+        gap_ahead=Gap(seconds=2.4), gap_behind=Gap(seconds=1.2), model_version=version,
+    )
+    lapped = RejoinEstimate(gap_ahead=Gap(laps=1), model_version=version)
+    assert seconds.gap_ahead.seconds == 2.4
+    assert lapped.gap_ahead.laps == 1
+
+
 def test_model_version_records_name_version_and_config_hash():
     version = ModelVersion(model_name="pace", version="2.1.0", config_hash="sha256:abc12345")
     assert version.config_hash == "sha256:abc12345"
@@ -324,35 +361,105 @@ def _evaluation(option_id: str) -> StrategyEvaluation:
     return StrategyEvaluation(
         option=StrategyOption(
             option_id=option_id,
-            plan=StrategyPlan(actions=(StrategyAction(action_type="stay_out"),)),
+            plan=StrategyPlan(
+                competitor_id=OUR_COMPETITOR,
+                actions=(StrategyAction(action_type=StrategyActionType.STAY_OUT),),
+            ),
         )
     )
 
 
 def test_recommendation_requires_unique_evaluations_and_matching_preference():
     recommendation = DecisionRecommendation(
-        preferred_option_id="hold", evaluations=(_evaluation("hold"),), confidence="medium"
+        competitor_id=OUR_COMPETITOR,
+        preferred_option_id="hold", evaluations=(_evaluation("hold"),), confidence=ConfidenceLevel.MEDIUM,
     )
     assert recommendation.evaluations[0].option.option_id == "hold"
     with pytest.raises(ValidationError):
-        DecisionRecommendation(preferred_option_id="pit", evaluations=(_evaluation("hold"),), confidence="low")
+        DecisionRecommendation(
+            competitor_id=OUR_COMPETITOR, preferred_option_id="pit",
+            evaluations=(_evaluation("hold"),), confidence=ConfidenceLevel.LOW,
+        )
+
+
+def test_strategy_plan_requires_competitor_and_recommendation_cannot_mix_targets():
+    with pytest.raises(ValidationError):
+        StrategyPlan(actions=(StrategyAction(action_type=StrategyActionType.STAY_OUT),))
+    other = StrategyEvaluation(
+        option=StrategyOption(
+            option_id="other",
+            plan=StrategyPlan(
+                competitor_id=CompetitorId("entry-6"),
+                actions=(StrategyAction(action_type=StrategyActionType.STAY_OUT),),
+            ),
+        )
+    )
     with pytest.raises(ValidationError):
         DecisionRecommendation(
-            preferred_option_id="hold", evaluations=(_evaluation("hold"), _evaluation("hold")), confidence="low"
+            competitor_id=OUR_COMPETITOR,
+            preferred_option_id="hold",
+            evaluations=(_evaluation("hold"), other),
+            confidence=ConfidenceLevel.LOW,
+        )
+
+
+def test_recommendation_trigger_target_must_match_but_condition_may_be_relative():
+    relative_condition = MetricRef(
+        metric=TriggerMetric.INTERVAL_TO_COMPETITOR_S,
+        subject=OUR_COMPETITOR,
+        relative_to=CompetitorId("entry-6"),
+    )
+    matching = DecisionTrigger(
+        target_competitor_id=OUR_COMPETITOR,
+        operand=relative_condition,
+        operator=TriggerOperator.GT,
+        threshold=21.8,
+        action=StrategyAction(action_type=StrategyActionType.PIT_NOW),
+    )
+    recommendation = DecisionRecommendation(
+        competitor_id=OUR_COMPETITOR,
+        preferred_option_id="hold",
+        evaluations=(_evaluation("hold"),),
+        confidence=ConfidenceLevel.MEDIUM,
+        change_triggers=(matching,),
+    )
+    assert recommendation.change_triggers[0].operand.relative_to == CompetitorId("entry-6")
+    with pytest.raises(ValidationError):
+        DecisionRecommendation(
+            competitor_id=OUR_COMPETITOR,
+            preferred_option_id="hold",
+            evaluations=(_evaluation("hold"),),
+            confidence=ConfidenceLevel.MEDIUM,
+            change_triggers=(matching.model_copy(update={"target_competitor_id": CompetitorId("entry-6")}),),
+        )
+    with pytest.raises(ValidationError):
+        DecisionRecommendation(
+            competitor_id=OUR_COMPETITOR, preferred_option_id="hold",
+            evaluations=(_evaluation("hold"), _evaluation("hold")), confidence=ConfidenceLevel.LOW,
         )
 
 
 def test_position_distribution_is_non_empty_unique_and_normalised():
     with pytest.raises(ValidationError):
-        StrategyEvaluation(option=_evaluation("hold").option, position_distribution=())
+        StrategyEvaluation(option=_evaluation("hold").option, finish_position_distribution=())
     with pytest.raises(ValidationError):
         StrategyEvaluation(
             option=_evaluation("hold").option,
-            position_distribution=(
+            finish_position_distribution=(
                 PositionProbability(position=5, probability=0.5),
                 PositionProbability(position=5, probability=0.5),
             ),
         )
+
+
+def test_expected_race_time_delta_requires_seconds():
+    version = ModelVersion(model_name="strategy", version="1", config_hash="sha256:abc12345")
+    StrategyEvaluation(
+        option=_evaluation("hold").option,
+        expected_race_time_delta=RaceTimeDeltaEstimate(value=-1.2, model_version=version),
+    )
+    with pytest.raises(ValidationError):
+        RaceTimeDeltaEstimate(value=-1.2, unit="ms", model_version=version)
 
 
 @pytest.mark.parametrize("factory", [
@@ -384,6 +491,32 @@ def test_interfaces_import_without_infrastructure_modules():
     import app.domain_v2.interfaces as interfaces
 
     assert interfaces.RaceDataSource
+    assert not hasattr(interfaces, "ValidationEngine")
+
+
+def test_foundation_contract_fields_do_not_expose_mutable_collections():
+    import app.domain_v2.estimates as estimates
+    import app.domain_v2.provenance as provenance
+    import app.domain_v2.race_state as race_state
+    import app.domain_v2.strategy as strategy
+    import app.domain_v2.tyre as tyre
+    import app.domain_v2.validation as validation
+
+    modules = (estimates, provenance, race_state, strategy, tyre, validation)
+
+    def contains_mutable(annotation) -> bool:
+        origin = get_origin(annotation)
+        if origin in {list, dict, set}:
+            return True
+        return any(contains_mutable(argument) for argument in get_args(annotation))
+
+    for module in modules:
+        for _, contract in inspect.getmembers(module, inspect.isclass):
+            if hasattr(contract, "model_fields") and contract.__module__ == module.__name__:
+                assert not any(
+                    contains_mutable(field.annotation)
+                    for field in contract.model_fields.values()
+                ), contract.__name__
 
 
 def test_no_domain_v2_module_imports_infrastructure():

@@ -18,7 +18,7 @@ Dependencies are sequential unless stated: V2.1 requires V2.0; V2.2 requires V2.
 - **Adapt:** use the existing invariant and fixtures to design provider DTO/filter/mapping separation; introduce `adapters/openf1` and `application/reconstruct_state.py`. Do not copy the focal-driver implementation unchanged.
 - **Legacy retained:** all V1 replay/live endpoints and V1 models.
 - **Risks/tests:** timestamp ambiguity, seconds-versus-laps gaps, position absence, provider drift, hindsight leakage and per-driver N+1 provider reads; golden mapping, missing/untimed data, usable-timezone/UTC, mixed-lap full-field and adversarial future-record tests.
-- **Acceptance:** focal completed lap establishes T; every included competitor, lap, weather and track-status value has defensible timing at or before T; the full field uses each competitor's own latest observation; untimed records degrade DataQuality rather than enter state; adapters use bulk reads where supported.
+- **Acceptance:** focal completed lap establishes T; every included competitor, lap, weather and track-status value has defensible timing at or before T; the full field uses each competitor's own latest observation; untimed records degrade DataQuality rather than enter state; adapters strictly parse/normalise transport values before canonical construction and use bulk reads where supported.
 - **Non-goals:** pace/tyre estimates, recommendations, frontend changes.
 
 ## V2.2 Pace & Tyre Estimation
@@ -46,7 +46,7 @@ Dependencies are sequential unless stated: V2.1 requires V2.0; V2.2 requires V2.
 - **Objective:** evaluate structured actions/sensitivities and emit deterministic recommendations/triggers.
 - **Reuse/adapt:** seed discipline and paired-scenario idea; discard “win probability” semantics.
 - **Legacy retained:** V1 Monte Carlo, candidate generation, Race Engineer and AI routes.
-- **New:** `simulation_v2`, scenario/sensitivity engine, `decision_v2`, `/v2` APIs. Recommendations select complete evaluated option IDs; raw simulation samples stay internal while DTOs expose typed estimate/quantile summaries.
+- **New:** `simulation_v2`, scenario/sensitivity engine, `decision_v2`, `/v2` APIs. Plans, simulator calls, decision calls, recommendations and triggers explicitly identify one focal CompetitorId. Coordinated two-car planning and structured sensitivity results remain future work. Recommendations select complete evaluated option IDs; raw samples stay internal while DTOs expose typed estimate/quantile summaries.
 - **Risks/tests:** infeasible options, correlated uncertainty, unstable rankings; determinism, property/edge, sensitivity, traceability and API contract tests.
 - **Acceptance:** north-star pit/stay-out comparison includes supported time/rejoin/traffic/risk outputs and machine triggers; all lineage recorded.
 - **Non-goals:** operational authority, autonomous calls, LLM decision input.
@@ -66,7 +66,7 @@ Dependencies are sequential unless stated: V2.1 requires V2.0; V2.2 requires V2.
 - **Objective:** replay frozen predictions and compare with separately loaded outcomes.
 - **Reuse/adapt:** historical discovery, fixtures, bounded states; extend case corpus.
 - **Legacy retained:** historical replay UI; never remove cutoff system.
-- **New:** `validation_v2`, case manifests, metric reports and validation UI.
+- **New:** approved multi-model ValidationCase semantics, the concrete ValidationEngine interface, `validation_v2`, case manifests, metric reports and validation UI. Typed ValidationMetric/ValidationResult outputs already exist; the input port is deliberately deferred until this stage.
 - **Risks/tests:** leakage, survivor bias, counterfactual overclaiming; temporal isolation, reproducibility, metric and calibration tests.
 - **Acceptance:** approved baseline distributions and segmented results; limitations visible; thresholds set by later FDE decision.
 - **Non-goals:** claims based on OpenF1-unobservable quantities.

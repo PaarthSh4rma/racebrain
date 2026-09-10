@@ -8,6 +8,7 @@ from .base import FrozenDomainModel
 from .enums import TrackStatus
 from .identity import CompetitorId, DriverId, EventId, SessionId
 from .provenance import DataQuality, ExternalIdentifier, Provenance
+from .timing import Gap
 from .tyre import TyreSetState
 
 
@@ -52,17 +53,6 @@ class LapObservation(FrozenDomainModel):
     @classmethod
     def completion_must_be_utc(cls, value: datetime):
         return _as_utc(value, "completed_at")
-
-
-class Gap(FrozenDomainModel):
-    seconds: float | None = Field(default=None, ge=0.0)
-    laps: int | None = Field(default=None, gt=0)
-
-    @model_validator(mode="after")
-    def has_exactly_one_representation(self):
-        if (self.seconds is None) == (self.laps is None):
-            raise ValueError("gap requires exactly one of seconds or laps")
-        return self
 
 
 class TrackStatusState(FrozenDomainModel):

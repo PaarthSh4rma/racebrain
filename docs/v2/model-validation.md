@@ -2,7 +2,7 @@
 
 A ValidationCase contains immutable canonical input at a recorded no-hindsight cutoff, model/config versions and config hashes, seed, prediction, data-quality report, and an observed outcome loaded only after prediction is frozen. Partitioning is chronological and grouped by event/session. Individual laps must never be randomly split where the same event could leak across train and test. Preferred evaluation is rolling-origin/forward-event evaluation.
 
-Validation engines return a strict ValidationResult: case ID, non-empty typed ValidationMetric values with explicit units and optional sample counts, warnings, model versions and provenance. Untyped metric dictionaries are not analytical contracts, and acceptance thresholds remain outside the result until established from baselines.
+Validation output is a strict ValidationResult: case ID, non-empty typed ValidationMetric values with explicit units and optional sample counts, warnings, model versions and provenance. The ValidationEngine input protocol is intentionally deferred to V2.6 because an approved ValidationCase must cover pace, degradation, pit loss, rejoin and strategy outcomes without speculative unions or generic dictionaries. Acceptance thresholds remain outside the result until established from baselines.
 
 For in-event updating at lap N, the model may use pre-event knowledge plus observations available through that decision cutoff only. Future laps from the same event remain excluded from features, calibration and selection at that prediction point.
 

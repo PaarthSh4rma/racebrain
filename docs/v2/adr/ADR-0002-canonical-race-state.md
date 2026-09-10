@@ -8,6 +8,8 @@ OpenF1 keys/dictionaries currently shape services and APIs, while replay and fut
 ## Decision
 All sources produce one immutable, provider-independent full-field RaceState at an aware UTC cutoff. RaceBrain-owned opaque domain IDs are required; provider IDs are optional metadata. Competitor identity means a session entry, not a chassis. Competitor, lap, weather and track-status observations require defensible timestamps; missing timing means exclusion plus DataQuality evidence. Gaps represent exactly seconds or positive whole laps. No global session-lap field is defined.
 
+Canonical contracts use strict construction and do not coerce provider/transport values. Parsing and normalisation happen at adapter boundaries. The shared Gap value is also used by rejoin estimates.
+
 ## Consequences
 Models consume stable semantics; adapter mapping and stricter validation become mandatory.
 

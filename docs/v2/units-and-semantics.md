@@ -2,6 +2,8 @@
 
 V2 uses explicit suffixes at boundaries: `_s`, `_ms`, `_laps`, `_c`, `_mps`, `_fraction`, and `_at`. SI units are preferred. Seconds are the default duration and must be named (`lap_time_s`, `pit_loss_s`). A canonical `Gap` uses exactly one of `seconds` or positive whole `laps`. Milliseconds are allowed only for raw timing precision or latency and use `_ms`; conversion occurs at the adapter boundary. Degradation is `s/lap/lap`.
 
+Canonical domain models use strict construction: strings, booleans, integers and floats are not silently coerced across types. Provider/API DTOs parse and normalise transport values before constructing domain contracts. Race-time delta is always seconds. Expected finish position and its distribution mean race-end position, never projected position at a limited horizon.
+
 - Laps and positions are integers starting at 1; tyre age and stop counts may be 0.
 - Timestamps are usable timezone-aware ISO 8601 instants normalised to UTC by canonical validation. Naive or unusable `tzinfo` values are invalid.
 - Temperatures are Celsius; wind is metres per second.

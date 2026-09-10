@@ -8,6 +8,8 @@ V1 and replay work today; a rewrite would combine semantic, model, API and UI ri
 ## Decision
 Use a strangler migration inside the existing FastAPI codebase: isolated contracts, canonical replay producer, calibrated model modules, V2 APIs, then operator UI. V1 routes remain until consumers and parity tests migrate.
 
+The foundation defers interfaces whose inputs are not yet semantically approved: concrete competitor behaviour waits for V2.3 and the multi-model ValidationEngine input contract waits for V2.6.
+
 ## Consequences
 Temporary duplication and explicit compatibility mapping are accepted; microservices and new infrastructure are not.
 

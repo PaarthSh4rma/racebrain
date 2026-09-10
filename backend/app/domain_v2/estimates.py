@@ -6,6 +6,7 @@ from .base import FrozenDomainModel
 from .enums import ConfidenceLevel, DistributionKind
 from .provenance import Provenance
 from .identity import CompetitorId
+from .timing import Gap
 
 
 class ModelVersion(FrozenDomainModel):
@@ -104,10 +105,16 @@ class PitLossEstimate(ModelEstimate):
     unit: str = Field(default="s", pattern=r"^s$")
 
 
+class RaceTimeDeltaEstimate(ModelEstimate):
+    """Race-time consequence relative to a stated strategy baseline, in seconds."""
+
+    unit: str = Field(default="s", pattern=r"^s$")
+
+
 class RejoinEstimate(FrozenDomainModel):
     expected_position: float | None = Field(default=None, ge=1.0)
-    gap_ahead_s: float | None = Field(default=None, ge=0.0)
-    gap_behind_s: float | None = Field(default=None, ge=0.0)
+    gap_ahead: Gap | None = None
+    gap_behind: Gap | None = None
     nearby_competitor_ids: tuple[CompetitorId, ...] = ()
     uncertainty: Uncertainty | None = None
     model_version: ModelVersion

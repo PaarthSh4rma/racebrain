@@ -1,7 +1,5 @@
 """Typed outputs for model validation; no validation algorithms live here."""
 
-from typing import Any
-
 from pydantic import Field, model_validator
 
 from .base import FrozenDomainModel
@@ -14,7 +12,6 @@ class ValidationMetric(FrozenDomainModel):
     value: float
     unit: str = Field(min_length=1)
     sample_count: int | None = Field(default=None, ge=1)
-    metadata: dict[str, str | int | float | bool] = Field(default_factory=dict)
 
 
 class ValidationResult(FrozenDomainModel):

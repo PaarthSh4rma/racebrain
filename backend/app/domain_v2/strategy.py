@@ -14,7 +14,7 @@ from .enums import (
     TyreCompound,
     TrackStatus,
 )
-from .estimates import ModelEstimate, ModelVersion, RejoinEstimate
+from .estimates import ModelVersion, RaceTimeDeltaEstimate, RejoinEstimate
 from .identity import CompetitorId, TyreSetId
 from .provenance import Provenance
 
@@ -52,6 +52,7 @@ class StrategyAction(FrozenDomainModel):
 
 
 class StrategyPlan(FrozenDomainModel):
+    competitor_id: CompetitorId
     actions: tuple[StrategyAction, ...] = Field(min_length=1)
 
 
@@ -96,6 +97,7 @@ class MetricRef(FrozenDomainModel):
 
 
 class DecisionTrigger(FrozenDomainModel):
+    target_competitor_id: CompetitorId
     operand: MetricRef
     operator: TriggerOperator
     threshold: StrictFloat | StrictInt | TrackStatus
@@ -130,14 +132,12 @@ class PositionProbability(FrozenDomainModel):
 
 class StrategyEvaluation(FrozenDomainModel):
     option: StrategyOption
-    expected_race_time_delta: ModelEstimate | None = None
-    expected_position: float | None = Field(default=None, ge=1.0)
-    position_distribution: tuple[PositionProbability, ...] | None = Field(default=None, min_length=1)
+    expected_race_time_delta: RaceTimeDeltaEstimate | None = None
+    expected_finish_position: float | None = Field(default=None, ge=1.0)
+    finish_position_distribution: tuple[PositionProbability, ...] | None = Field(default=None, min_length=1)
     rejoin: RejoinEstimate | None = None
     traffic_risk: RiskLevel = RiskLevel.UNKNOWN
     tyre_life_risk: RiskLevel = RiskLevel.UNKNOWN
-    weather_sensitivity: ModelEstimate | None = None
-    safety_car_sensitivity: ModelEstimate | None = None
     warnings: tuple[str, ...] = ()
     assumptions: tuple[str, ...] = ()
     model_versions: tuple[ModelVersion, ...] = ()
@@ -145,17 +145,18 @@ class StrategyEvaluation(FrozenDomainModel):
 
     @model_validator(mode="after")
     def distribution_semantics_are_complete(self):
-        if self.position_distribution is not None:
-            positions = [item.position for item in self.position_distribution]
+        if self.finish_position_distribution is not None:
+            positions = [item.position for item in self.finish_position_distribution]
             if len(positions) != len(set(positions)):
-                raise ValueError("position distribution cannot repeat a position")
-            total = sum(item.probability for item in self.position_distribution)
+                raise ValueError("finish-position distribution cannot repeat a position")
+            total = sum(item.probability for item in self.finish_position_distribution)
             if abs(total - 1.0) > 1e-6:
-                raise ValueError("position probabilities must sum to 1")
+                raise ValueError("finish-position probabilities must sum to 1")
         return self
 
 
 class DecisionRecommendation(FrozenDomainModel):
+    competitor_id: CompetitorId
     preferred_option_id: str = Field(min_length=1)
     evaluations: tuple[StrategyEvaluation, ...] = Field(min_length=1)
     confidence: ConfidenceLevel
@@ -168,8 +169,14 @@ class DecisionRecommendation(FrozenDomainModel):
     @model_validator(mode="after")
     def preferred_option_is_unique_and_evaluated(self):
         option_ids = [item.option.option_id for item in self.evaluations]
+        competitor_ids = [item.option.plan.competitor_id for item in self.evaluations]
+
+        if any(item != self.competitor_id for item in competitor_ids):
+            raise ValueError("all evaluations must target the recommendation competitor")
         if len(option_ids) != len(set(option_ids)):
             raise ValueError("evaluated StrategyOption IDs must be unique")
         if option_ids.count(self.preferred_option_id) != 1:
             raise ValueError("preferred_option_id must identify exactly one evaluation")
+        if any(trigger.target_competitor_id != self.competitor_id for trigger in self.change_triggers):
+            raise ValueError("change triggers must target the recommendation competitor")
         return self

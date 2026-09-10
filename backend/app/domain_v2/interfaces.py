@@ -7,7 +7,6 @@ from .estimates import DegradationEstimate, PaceEstimate
 from .identity import CompetitorId, SessionId
 from .race_state import CarState, RaceState
 from .strategy import DecisionRecommendation, StrategyEvaluation, StrategyOption
-from .validation import ValidationResult
 
 
 class RaceDataSource(Protocol):
@@ -40,7 +39,12 @@ class StrategySimulator(Protocol):
     """Evaluate structured options under explicit configuration and seed."""
 
     def evaluate(
-        self, state: RaceState, options: Sequence[StrategyOption], *, seed: int
+        self,
+        state: RaceState,
+        competitor_id: CompetitorId,
+        options: Sequence[StrategyOption],
+        *,
+        seed: int,
     ) -> Sequence[StrategyEvaluation]: ...
 
 
@@ -48,13 +52,8 @@ class DecisionEngine(Protocol):
     """Choose among supplied evaluations without natural-language generation."""
 
     def recommend(
-        self, state: RaceState, evaluations: Sequence[StrategyEvaluation]
+        self,
+        state: RaceState,
+        competitor_id: CompetitorId,
+        evaluations: Sequence[StrategyEvaluation],
     ) -> DecisionRecommendation: ...
-
-
-class ValidationEngine(Protocol):
-    """Score model estimates against a separately supplied observed outcome."""
-
-    def validate(
-        self, case_id: str, estimate: StrategyEvaluation, observed: RaceState
-    ) -> ValidationResult: ...

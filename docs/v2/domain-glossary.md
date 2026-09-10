@@ -22,17 +22,17 @@ This glossary is normative for V2. “AI” is not a domain concept.
 | Stint | Consecutive race laps on one tyre set, bounded by start and optional known end. |
 | PitLoss | Estimated elapsed-time cost in seconds relative to staying on track under stated track status. |
 | PitWindow | Inclusive lap interval in which a planned stop remains strategically admissible. |
-| Rejoin | Predicted post-stop position, gaps and nearby cars; always a model estimate. |
+| Rejoin | Predicted post-stop position, shared seconds-or-whole-laps Gap values, and nearby competitors; always a model estimate. |
 | TrafficState | Relevant cars, gaps, pace relationships and overtaking constraints around a projected path/rejoin. |
 | PaceEstimate | ModelEstimate of representative lap time in seconds per lap under stated conditions. |
 | DegradationEstimate | ModelEstimate of tyre-related lap-time change in seconds per lap per additional tyre lap. |
 | ModelEstimate | Numeric value with unit, model version, assumptions, uncertainty and provenance. |
 | Uncertainty | Explicit distribution family, interval, standard deviation or samples; absence means not quantified, not zero. |
 | StrategyAction | Machine-readable instruction: stay out, pit now, pit in a lap/window with tyre choice, or reconsider. |
-| StrategyPlan | Ordered non-empty sequence of StrategyActions. |
-| StrategyOption | Identified plan offered for evaluation. |
-| StrategyEvaluation | Modelled consequences and risks for one complete option under one state/configuration/seed. Distribution summaries use typed estimate uncertainty, never raw sample vectors. |
-| DecisionTrigger | Machine-evaluable registered metric reference/operator/threshold that activates a StrategyAction; it contains no expression or code. |
+| StrategyPlan | One explicit CompetitorId plus an ordered non-empty sequence of actions applying to that entry. Coordinated two-car plans are future scope. |
+| StrategyOption | Identified one-competitor plan offered for evaluation. |
+| StrategyEvaluation | Modelled consequences and risks for one complete option under one state/configuration/seed. Finish-position fields mean race-end classification only and remain absent for limited-horizon models. |
+| DecisionTrigger | Machine-evaluable registered condition plus explicit target CompetitorId and concrete action; condition references may name other competitors. |
 | DecisionRecommendation | Preferred evaluated option ID, complete evaluations, confidence, assumptions, warnings, change triggers and model lineage. |
 | Observation | A measured or provider-reported fact with a defensible UTC observation/completion time and provenance. Untimed historical records are excluded and reported through DataQuality. |
 | Provenance | Source, version, timestamps, provider metadata, transformations and assumptions supporting a value. |
