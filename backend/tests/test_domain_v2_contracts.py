@@ -81,6 +81,18 @@ def test_provider_id_is_optional_metadata_not_domain_identity():
     assert str(session.session_id) == "race-1"
 
 
+def test_canonical_ids_accept_valid_strings_without_transport_coercion():
+    assert str(EventId("event-1")) == "event-1"
+    assert str(SessionId("session-1")) == "session-1"
+    assert str(CompetitorId("entry-5")) == "entry-5"
+
+
+@pytest.mark.parametrize("value", [b"event-1", 123, True])
+def test_canonical_ids_reject_non_string_transport_values(value):
+    with pytest.raises(ValidationError):
+        EventId(value)
+
+
 def test_multiple_provider_ids_do_not_change_canonical_identity_schema():
     first = Session(
         session_id=SessionId("race-1"),

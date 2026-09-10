@@ -9,7 +9,7 @@ from pydantic import ConfigDict, Field, RootModel
 
 
 class OpaqueId(RootModel[str]):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, strict=True)
     root: str = Field(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
 
     def __str__(self) -> str:
