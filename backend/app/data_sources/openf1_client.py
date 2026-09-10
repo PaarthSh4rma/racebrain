@@ -57,9 +57,13 @@ class MemoryTTLCache:
 class OpenF1Client:
     TTL_BY_ENDPOINT = {
         "sessions": 900,
+        "meetings": 900,
         "drivers": 900,
         "laps": 300,
         "stints": 300,
+        "intervals": 180,
+        "position": 180,
+        "pit": 300,
         "weather": 180,
         "race_control": 180,
     }
@@ -179,6 +183,9 @@ class OpenF1Client:
             params["driver_number"] = driver_number
         return self._get("laps", params, bypass_cache=bypass_cache)
 
+    def get_meetings(self, meeting_key: int, *, bypass_cache: bool = False):
+        return self._get("meetings", {"meeting_key": meeting_key}, bypass_cache=bypass_cache)
+
     def get_stints(
         self,
         session_key: int,
@@ -197,6 +204,15 @@ class OpenF1Client:
             {"session_key": session_key},
             bypass_cache=bypass_cache,
         )
+
+    def get_intervals(self, session_key: int, *, bypass_cache: bool = False):
+        return self._get("intervals", {"session_key": session_key}, bypass_cache=bypass_cache)
+
+    def get_position(self, session_key: int, *, bypass_cache: bool = False):
+        return self._get("position", {"session_key": session_key}, bypass_cache=bypass_cache)
+
+    def get_pit(self, session_key: int, *, bypass_cache: bool = False):
+        return self._get("pit", {"session_key": session_key}, bypass_cache=bypass_cache)
 
     def get_race_control(self, session_key: int, *, bypass_cache: bool = False):
         return self._get(
