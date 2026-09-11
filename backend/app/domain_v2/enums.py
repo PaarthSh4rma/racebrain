@@ -75,6 +75,10 @@ class LapQualityWarning(StrEnum):
     EXTREME_OUTLIER = "extreme_outlier"
 
 
+class PaceAvailabilityReason(StrEnum):
+    INSUFFICIENT_RECENT_CLEAN_LAPS = "insufficient_recent_clean_laps"
+
+
 class TriggerMetric(StrEnum):
     GAP_AHEAD_S = "gap_ahead_s"
     GAP_BEHIND_S = "gap_behind_s"
