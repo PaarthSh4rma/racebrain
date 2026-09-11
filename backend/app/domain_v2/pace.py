@@ -58,6 +58,8 @@ class CompetitorPaceFit(FrozenDomainModel):
                 raise ValueError("estimate and diagnostics must use the same cutoff")
             if self.estimate.model_version != self.diagnostics.model_version:
                 raise ValueError("estimate and diagnostics must use the same model version")
+            if self.estimate.sample_count != self.diagnostics.included_laps:
+                raise ValueError("estimate sample count must equal included diagnostic laps")
         return self
 
 

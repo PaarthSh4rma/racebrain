@@ -78,8 +78,8 @@ def estimate_competitor_pace(
         residuals = tuple(item.lap_time_s - pace_value for item in included)
         residual_median = float(median(residuals))
         residual_median_absolute = float(median(abs(value) for value in residuals))
-    timing_warnings = _timing_warnings(included)
-    diagnostic_warnings = list(timing_warnings)
+    evidence_quality = _pace_evidence_quality(included, config)
+    diagnostic_warnings = list(evidence_quality.warnings)
     if insufficient:
         diagnostic_warnings.append(
             f"insufficient recent clean laps: {len(included)} available; {config.minimum_clean_laps} required"
@@ -96,11 +96,10 @@ def estimate_competitor_pace(
         warnings=tuple(diagnostic_warnings),
         model_version=model_version,
         data_quality=DataQuality(
-            level=DataQualityLevel.INSUFFICIENT if insufficient else (
-                DataQualityLevel.DEGRADED if timing_warnings else DataQualityLevel.GOOD
-            ),
+            level=DataQualityLevel.INSUFFICIENT if insufficient else evidence_quality.level,
             completeness=None,
             warnings=tuple(diagnostic_warnings),
+            missing_fields=evidence_quality.missing_fields,
         ),
         provenance=(model_provenance,),
     )
@@ -142,11 +141,7 @@ def estimate_competitor_pace(
             "Configured quality-warning exclusions are disqualifying.",
         ),
         provenance=(model_provenance,),
-        data_quality=DataQuality(
-            level=DataQualityLevel.DEGRADED if timing_warnings else DataQualityLevel.GOOD,
-            completeness=None,
-            warnings=timing_warnings,
-        ),
+        data_quality=evidence_quality,
         limitations=MODEL_LIMITATIONS,
     )
     return CompetitorPaceFit(
@@ -169,14 +164,32 @@ def estimate_field_pace(
     )
 
 
-def _timing_warnings(observations: list[ModellingLapObservation]) -> tuple[str, ...]:
-    relevant = {
+def _pace_evidence_quality(
+    observations: list[ModellingLapObservation],
+    config: PaceModelConfig,
+) -> DataQuality:
+    warnings = {
         warning
         for item in observations
         for warning in item.data_quality.warnings
         if "timing" in warning.lower() or "lap completion" in warning.lower() or "lap duration" in warning.lower()
     }
-    return tuple(sorted(relevant))
+    relevant_missing = {"race_control_context"}
+    if LapQualityWarning.WEATHER_TRANSITION in config.excluded_quality_warnings:
+        relevant_missing.add("weather_context")
+    missing_fields = tuple(
+        field
+        for field in ("race_control_context", "weather_context")
+        if field in relevant_missing
+        and any(field in item.data_quality.missing_fields for item in observations)
+    )
+    ordered_warnings = tuple(sorted(warnings))
+    return DataQuality(
+        level=DataQualityLevel.DEGRADED if ordered_warnings or missing_fields else DataQualityLevel.GOOD,
+        completeness=None,
+        warnings=ordered_warnings,
+        missing_fields=missing_fields,
+    )
 
 
 def _model_provenance(config: PaceModelConfig) -> Provenance:

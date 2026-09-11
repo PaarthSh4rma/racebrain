@@ -136,6 +136,12 @@ class PaceModelConfig(FrozenDomainModel):
             raise ValueError("excluded quality warnings must be unique")
         return tuple(reason for reason in LapQualityWarning if reason in value)
 
+    @model_validator(mode="after")
+    def sample_requirement_fits_lookback(self):
+        if self.lookback_laps < self.minimum_clean_laps:
+            raise ValueError("lookback_laps must be greater than or equal to minimum_clean_laps")
+        return self
+
     def version(self) -> ModelVersion:
         payload = json.dumps(self.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
         return ModelVersion(

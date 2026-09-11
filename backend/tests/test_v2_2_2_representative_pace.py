@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 import inspect
 
 import pytest
+from pydantic import ValidationError
 
 from app.application_v2.build_pace_context import build_historical_pace_context
 from app.application_v2.reconstruct_race_state import HistoricalRaceStateRequest
@@ -15,6 +16,7 @@ from app.domain_v2.enums import (
 )
 from app.domain_v2.identity import CompetitorId, EventId, SessionId
 from app.domain_v2.modelling import ModellingLapObservation, PaceEstimationContext, PaceModelConfig
+from app.domain_v2.pace import CompetitorPaceFit
 from app.domain_v2.provenance import DataQuality
 from app.domain_v2.race_state import CarState, Event, RaceState, Session
 from app.models_v2.representative_pace import (
@@ -217,6 +219,96 @@ def test_config_hash_covers_lookback_warning_policy_and_version_with_canonical_w
     reordered = config(excluded_quality_warnings=(LapQualityWarning.EXTREME_OUTLIER, LapQualityWarning.WEATHER_TRANSITION))
     canonical = config(excluded_quality_warnings=(LapQualityWarning.WEATHER_TRANSITION, LapQualityWarning.EXTREME_OUTLIER))
     assert reordered.version() == canonical.version()
+
+
+@pytest.mark.parametrize("lookback,minimum", ((8, 3), (3, 3)))
+def test_config_accepts_lookback_that_can_satisfy_minimum_clean_laps(lookback, minimum):
+    assert config(lookback_laps=lookback, minimum_clean_laps=minimum).lookback_laps == lookback
+
+
+def test_config_rejects_minimum_clean_laps_larger_than_lookback():
+    with pytest.raises(ValidationError, match="lookback_laps must be greater than or equal"):
+        config(lookback_laps=2, minimum_clean_laps=3)
+
+
+def test_fit_contract_accepts_matching_and_rejects_mismatched_sample_count():
+    fit = estimate_competitor_pace(
+        context([lap(lap_number=index, lap_time_s=80 + index) for index in (1, 2, 3)]),
+        A,
+        config(),
+    )
+    assert CompetitorPaceFit.model_validate(fit.model_dump()) == fit
+    mismatched = fit.estimate.model_copy(update={"sample_count": fit.estimate.sample_count + 1})
+    with pytest.raises(ValidationError, match="sample count must equal"):
+        CompetitorPaceFit(
+            competitor_id=fit.competitor_id,
+            estimate=mismatched,
+            diagnostics=fit.diagnostics,
+            selection_audit=fit.selection_audit,
+        )
+
+
+def test_missing_race_control_selection_evidence_degrades_without_excluding():
+    missing = DataQuality(missing_fields=("race_control_context",))
+    fit = estimate_competitor_pace(
+        context([lap(lap_number=index, lap_time_s=80 + index, quality=missing) for index in (1, 2, 3)]),
+        A,
+        config(),
+    )
+    assert (fit.diagnostics.candidate_laps, fit.diagnostics.included_laps, fit.diagnostics.excluded_laps) == (3, 3, 0)
+    assert fit.estimate.data_quality.level is DataQualityLevel.DEGRADED
+    assert fit.estimate.data_quality.missing_fields == ("race_control_context",)
+    assert fit.diagnostics.data_quality.missing_fields == ("race_control_context",)
+    assert fit.estimate.data_quality.completeness is None
+
+
+def test_missing_weather_is_relevant_only_when_weather_transition_is_excluded():
+    missing = DataQuality(missing_fields=("weather_context",))
+    observations = [lap(lap_number=index, lap_time_s=80 + index, quality=missing) for index in (1, 2, 3)]
+    configured = estimate_competitor_pace(context(observations), A, config())
+    unconfigured = estimate_competitor_pace(
+        context(observations), A, config(excluded_quality_warnings=()),
+    )
+    assert configured.estimate.data_quality.level is DataQualityLevel.DEGRADED
+    assert configured.estimate.data_quality.missing_fields == ("weather_context",)
+    assert configured.diagnostics.included_laps == 3
+    assert unconfigured.estimate.data_quality.level is DataQualityLevel.GOOD
+    assert unconfigured.estimate.data_quality.missing_fields == ()
+
+
+@pytest.mark.parametrize("irrelevant", ("gap_context", "tyre_annotation"))
+def test_missing_non_model_evidence_does_not_degrade_or_change_selection(irrelevant):
+    missing = DataQuality(level=DataQualityLevel.DEGRADED, missing_fields=(irrelevant,))
+    fit = estimate_competitor_pace(
+        context([lap(lap_number=index, lap_time_s=80 + index, quality=missing) for index in (1, 2, 3)]),
+        A,
+        config(),
+    )
+    assert fit.estimate.data_quality.level is DataQualityLevel.GOOD
+    assert fit.estimate.data_quality.missing_fields == ()
+    assert (fit.diagnostics.candidate_laps, fit.diagnostics.included_laps, fit.diagnostics.excluded_laps) == (3, 3, 0)
+
+
+def test_insufficient_quality_preserves_unique_deterministic_relevant_limitations():
+    timing_warning = "OpenF1 lap completion is approximated from date_start + lap_duration"
+    limited = DataQuality(
+        warnings=(timing_warning, timing_warning),
+        missing_fields=("weather_context", "race_control_context", "weather_context"),
+    )
+    fit = estimate_competitor_pace(
+        context([lap(lap_number=index, lap_time_s=80 + index, quality=limited) for index in (1, 2)]),
+        A,
+        config(),
+    )
+    assert fit.estimate is None
+    assert fit.diagnostics.data_quality.level is DataQualityLevel.INSUFFICIENT
+    assert fit.diagnostics.data_quality.missing_fields == ("race_control_context", "weather_context")
+    assert fit.diagnostics.data_quality.warnings == (
+        timing_warning,
+        "insufficient recent clean laps: 2 available; 3 required",
+    )
+    assert fit.diagnostics.data_quality.completeness is None
+    assert (fit.diagnostics.candidate_laps, fit.diagnostics.included_laps, fit.diagnostics.excluded_laps) == (2, 2, 0)
 
 
 def test_estimator_is_deterministic_pure_and_has_no_provider_dependency():
