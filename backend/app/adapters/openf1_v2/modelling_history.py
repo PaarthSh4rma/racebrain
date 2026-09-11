@@ -19,8 +19,15 @@ from app.domain_v2.provenance import DataQuality, Provenance
 from app.domain_v2.race_state import RaceState, WeatherState
 
 from .dto import IntervalDTO, LapDTO, PitDTO, PositionDTO, RaceControlDTO, StintDTO, WeatherDTO
-from .mapper import OpenF1Dataset, _completed, _stable_record_key, _usable_weather, global_track_status, track_status_precedence
-from .parsing import parse_gap
+from .mapper import (
+    OpenF1Dataset,
+    _completed,
+    _stable_record_key,
+    _usable_weather,
+    canonical_interval_gaps,
+    global_track_status,
+    track_status_precedence,
+)
 
 
 @dataclass
@@ -146,19 +153,30 @@ def build_pace_context(
         diagnostics.gap_alignments += gap is not None
 
     diagnostics.admitted_observations = len(observations)
-    context_warnings = []
+    context_warnings = list(race_state.data_quality.warnings)
     if diagnostics.conflicting_laps:
         context_warnings.append("conflicting timed lap evidence was omitted")
     if diagnostics.ambiguous_stint_annotations:
         context_warnings.append("some tyre annotations were omitted because bounded stint evidence conflicted")
+    if observations:
+        context_warnings.append("OpenF1 lap completion is approximated from date_start + lap_duration")
+    context_warnings = sorted(set(context_warnings))
+    context_missing = tuple(sorted(set(race_state.data_quality.missing_fields)))
+    if race_state.data_quality.level is DataQualityLevel.INSUFFICIENT:
+        context_level = DataQualityLevel.INSUFFICIENT
+    elif observations or context_warnings or context_missing:
+        context_level = DataQualityLevel.DEGRADED
+    else:
+        context_level = race_state.data_quality.level
     context = PaceEstimationContext(
         race_state=race_state,
         as_of=race_state.observation_cutoff,
         observations=tuple(observations),
         data_quality=DataQuality(
-            level=DataQualityLevel.DEGRADED if context_warnings else race_state.data_quality.level,
+            level=context_level,
             completeness=None,
             warnings=tuple(context_warnings),
+            missing_fields=context_missing,
         ),
         provenance=(_provenance(
             "OpenF1 historical session datasets", race_state.observation_cutoff, session_key,
@@ -373,14 +391,13 @@ def _align_gap(intervals, positions, completed_at, session_key):
     bounded_positions = [item for item in positions if item.date <= completed_at]
     leader = bool(bounded_positions and bounded_positions[-1].position == 1)
     for item in reversed([row for row in intervals if row.date <= completed_at]):
-        ahead, to_leader = parse_gap(item.interval), parse_gap(item.gap_to_leader)
-        if (item.interval is not None and ahead is None) or (item.gap_to_leader is not None and to_leader is None):
+        gaps = canonical_interval_gaps(item, leader)
+        if gaps is None:
             continue
-        if ahead is None and to_leader is None and not leader:
-            continue
+        ahead, to_leader = gaps
         return GapEvidence(
             observed_at=item.date,
-            gap_ahead=None if leader else ahead,
+            gap_ahead=ahead,
             gap_to_leader=to_leader,
             provenance=(_provenance(
                 "intervals", item.date, session_key,

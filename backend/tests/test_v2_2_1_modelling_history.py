@@ -4,8 +4,11 @@ import random
 
 import pytest
 
+from app.adapters.openf1_v2.dto import IntervalDTO, LapDTO, PitDTO, PositionDTO, RaceControlDTO, StintDTO, WeatherDTO
+from app.adapters.openf1_v2.mapper import OpenF1Dataset, ParsedRecords
+from app.adapters.openf1_v2.modelling_history import build_pace_context
 from app.application_v2.build_pace_context import build_historical_pace_context
-from app.application_v2.reconstruct_race_state import HistoricalRaceStateRequest
+from app.application_v2.reconstruct_race_state import HistoricalRaceStateRequest, _parse
 from app.domain_v2.enums import (
     DataQualityLevel,
     LapAdmissionRejectionReason,
@@ -14,6 +17,7 @@ from app.domain_v2.enums import (
     TrackStatus,
     TyreCompound,
 )
+from app.domain_v2.provenance import DataQuality
 from tests.fixtures.openf1_v2_fixtures import RecordingOpenF1Client, historical_payload
 
 
@@ -49,6 +53,20 @@ def observation(result, driver_number, lap_number):
         if any(item.resource_type == "driver_number" and item.value == str(driver_number) for item in car.external_ids)
     )
     return next(item for item in result.context.observations if item.competitor_id == competitor and item.lap_number == lap_number)
+
+
+def modelling_dataset(payload):
+    empty = ParsedRecords(())
+    return OpenF1Dataset(
+        sessions=empty, meetings=empty, drivers=empty,
+        laps=_parse(payload["laps"], LapDTO),
+        stints=_parse(payload["stints"], StintDTO),
+        intervals=_parse(payload["intervals"], IntervalDTO),
+        positions=_parse(payload["positions"], PositionDTO),
+        pits=_parse(payload["pits"], PitDTO),
+        weather=_parse(payload["weather"], WeatherDTO),
+        race_control=_parse(payload["race_control"], RaceControlDTO),
+    )
 
 
 def test_full_field_builder_uses_canonical_cutoff_identity_and_session_scoped_cache():
@@ -87,6 +105,9 @@ def test_admission_rejections_bounded_scope_and_conflicting_laps_are_distinct():
     assert result.diagnostics.unmapped_competitor_rows >= 1
     assert result.diagnostics.foreign_session_rows >= 1
     assert result.diagnostics.rows_bounded_out >= 1
+    assert result.context.data_quality.warnings == tuple(sorted(set(result.context.data_quality.warnings)))
+    assert "conflicting timed lap evidence was omitted" in result.context.data_quality.warnings
+    assert set(result.context.race_state.data_quality.warnings) <= set(result.context.data_quality.warnings)
     with pytest.raises(StopIteration):
         observation(result, 4, 1)
 
@@ -234,17 +255,41 @@ def test_weather_is_latest_before_each_lap_not_latest_at_cutoff_and_transition_i
     assert LapQualityWarning.WEATHER_TRANSITION in second.quality_warnings
 
 
-def test_gap_alignment_falls_back_preserves_dimensions_zero_and_leader_semantics():
+@pytest.mark.parametrize("newest,expected_ahead,expected_leader", [
+    ({"interval": 2.5, "gap_to_leader": "bad"}, (2.5, None), None),
+    ({"interval": "bad", "gap_to_leader": "+1 LAP"}, None, (None, 1)),
+    ({"interval": "bad", "gap_to_leader": "bad"}, (1.5, None), (8.0, None)),
+])
+def test_nonleader_gap_dimensions_are_independent_and_fallback_only_when_both_unusable(
+    newest, expected_ahead, expected_leader,
+):
     payload = historical_payload()
+    payload["intervals"] = [row for row in payload["intervals"] if row["driver_number"] != 4]
     payload["intervals"].extend([
-        {"session_key": 999, "driver_number": 16, "date": "2024-05-26T13:01:59.5Z", "interval": "bad", "gap_to_leader": "bad"},
-        {"session_key": 999, "driver_number": 4, "date": "2024-05-26T13:01:00Z", "interval": 0.0, "gap_to_leader": "+2 LAPS"},
+        {"session_key": 999, "driver_number": 4, "date": "2024-05-26T13:01:00Z", "interval": 1.5, "gap_to_leader": 8.0},
+        {"session_key": 999, "driver_number": 4, "date": "2024-05-26T13:01:01Z", **newest},
     ])
     result, _ = build(payload)
-    leader = observation(result, 16, 2).gap_evidence
     other = observation(result, 4, 1).gap_evidence
+    actual_ahead = None if other.gap_ahead is None else (other.gap_ahead.seconds, other.gap_ahead.laps)
+    actual_leader = None if other.gap_to_leader is None else (other.gap_to_leader.seconds, other.gap_to_leader.laps)
+    assert actual_ahead == expected_ahead
+    assert actual_leader == expected_leader
+    reconstructed = result.context.race_state
+    car = next(car for car in reconstructed.competitors if car.external_ids[0].value == "4")
+    assert car.gap_ahead == other.gap_ahead
+    assert car.gap_to_leader == other.gap_to_leader
+
+
+def test_leader_interval_is_irrelevant_and_explicit_zero_to_leader_is_preserved():
+    payload = historical_payload()
+    payload["intervals"].append({
+        "session_key": 999, "driver_number": 16, "date": "2024-05-26T13:01:59.5Z",
+        "interval": "irrelevant", "gap_to_leader": 0.0,
+    })
+    result, _ = build(payload)
+    leader = observation(result, 16, 2).gap_evidence
     assert leader.gap_ahead is None and leader.gap_to_leader.seconds == 0.0
-    assert other.gap_ahead.seconds == 0.0 and other.gap_to_leader.laps == 2
 
 
 def test_pit_out_and_exact_passage_are_factual_but_duplicates_future_and_adjacent_are_not():
@@ -303,3 +348,26 @@ def test_quality_and_provenance_are_inspectable_without_fake_completeness():
         for source in item.provenance
     )
     assert result.context.provenance[0].observed_at <= result.context.as_of
+
+
+def test_good_race_state_is_degraded_by_builder_wide_completion_assumption_without_mutation():
+    payload = historical_payload()
+    reconstructed, _ = build(payload)
+    original_state = reconstructed.context.race_state
+    good_state = original_state.model_copy(update={
+        "data_quality": DataQuality(
+            level=DataQualityLevel.GOOD,
+            warnings=("inherited warning",),
+            missing_fields=("inherited field",),
+        ),
+    })
+    context, _ = build_pace_context(good_state, modelling_dataset(payload), 999)
+    assert context.data_quality.level is DataQualityLevel.DEGRADED
+    assert context.data_quality.completeness is None
+    assert context.data_quality.missing_fields == ("inherited field",)
+    assert set(context.data_quality.warnings) >= {
+        "inherited warning",
+        "OpenF1 lap completion is approximated from date_start + lap_duration",
+    }
+    assert good_state.data_quality.level is DataQualityLevel.GOOD
+    assert all(item.data_quality.level is DataQualityLevel.DEGRADED for item in context.observations)

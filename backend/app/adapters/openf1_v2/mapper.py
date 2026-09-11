@@ -121,15 +121,25 @@ def _latest_interval(records, driver_number: int, cutoff: datetime, is_leader: b
         if item.date > cutoff:
             diagnostics.future_records += 1
             continue
-        ahead, leader = parse_gap(item.interval), parse_gap(item.gap_to_leader)
-        if ahead is None and leader is None and not is_leader:
+        gaps = canonical_interval_gaps(item, is_leader)
+        if gaps is None:
             diagnostics.malformed_records += 1
             continue
+        ahead, leader = gaps
         valid.append((item.date, _stable_record_key(item), item, ahead, leader))
     if not valid:
         return None
     diagnostics.included_records["intervals"] = diagnostics.included_records.get("intervals", 0) + 1
     return max(valid, key=lambda value: (value[0], value[1]))
+
+
+def canonical_interval_gaps(item: IntervalDTO, is_leader: bool):
+    """Return V2.1 canonical gaps, or None only when a non-leader row has neither."""
+
+    ahead, leader = parse_gap(item.interval), parse_gap(item.gap_to_leader)
+    if ahead is None and leader is None and not is_leader:
+        return None
+    return (None if is_leader else ahead), leader
 
 
 def _quality(missing: list[str], warnings: list[str], insufficient: bool = False) -> DataQuality:
