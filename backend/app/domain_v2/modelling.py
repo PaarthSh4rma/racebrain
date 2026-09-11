@@ -125,7 +125,22 @@ class PaceModelConfig(FrozenDomainModel):
     model_name: str = Field(min_length=1)
     model_version: str = Field(min_length=1)
     minimum_clean_laps: int = Field(ge=2)
+    lookback_laps: int = Field(default=8, ge=1)
+    excluded_quality_warnings: tuple[LapQualityWarning, ...] = (LapQualityWarning.WEATHER_TRANSITION,)
     random_seed: int | None = None
+
+    @field_validator("excluded_quality_warnings")
+    @classmethod
+    def warning_policy_is_unique_and_deterministic(cls, value):
+        if len(set(value)) != len(value):
+            raise ValueError("excluded quality warnings must be unique")
+        return tuple(reason for reason in LapQualityWarning if reason in value)
+
+    @model_validator(mode="after")
+    def sample_requirement_fits_lookback(self):
+        if self.lookback_laps < self.minimum_clean_laps:
+            raise ValueError("lookback_laps must be greater than or equal to minimum_clean_laps")
+        return self
 
     def version(self) -> ModelVersion:
         payload = json.dumps(self.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
