@@ -85,6 +85,8 @@ def test_closed_taxonomy_separates_admission_rejection_exclusion_and_suspicion()
     assert set(LapAdmissionRejectionReason) == {
         LapAdmissionRejectionReason.MISSING_TIMING,
         LapAdmissionRejectionReason.INVALID_DURATION,
+        LapAdmissionRejectionReason.INVALID_LAP_NUMBER,
+        LapAdmissionRejectionReason.CONFLICTING_TIMING_EVIDENCE,
     }
     assert "missing_timing" not in {item.value for item in LapExclusionReason}
     assert "invalid_duration" not in {item.value for item in LapExclusionReason}

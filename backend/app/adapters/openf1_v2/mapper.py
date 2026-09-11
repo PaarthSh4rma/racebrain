@@ -121,15 +121,25 @@ def _latest_interval(records, driver_number: int, cutoff: datetime, is_leader: b
         if item.date > cutoff:
             diagnostics.future_records += 1
             continue
-        ahead, leader = parse_gap(item.interval), parse_gap(item.gap_to_leader)
-        if ahead is None and leader is None and not is_leader:
+        gaps = canonical_interval_gaps(item, is_leader)
+        if gaps is None:
             diagnostics.malformed_records += 1
             continue
+        ahead, leader = gaps
         valid.append((item.date, _stable_record_key(item), item, ahead, leader))
     if not valid:
         return None
     diagnostics.included_records["intervals"] = diagnostics.included_records.get("intervals", 0) + 1
     return max(valid, key=lambda value: (value[0], value[1]))
+
+
+def canonical_interval_gaps(item: IntervalDTO, is_leader: bool):
+    """Return V2.1 canonical gaps, or None only when a non-leader row has neither."""
+
+    ahead, leader = parse_gap(item.interval), parse_gap(item.gap_to_leader)
+    if ahead is None and leader is None and not is_leader:
+        return None
+    return (None if is_leader else ahead), leader
 
 
 def _quality(missing: list[str], warnings: list[str], insufficient: bool = False) -> DataQuality:
@@ -198,7 +208,6 @@ def _usable_weather(item: WeatherDTO) -> bool:
 
 def _status(records: tuple[RaceControlDTO, ...], cutoff: datetime, session_key: int, diagnostics: ReconstructionDiagnostics):
     states = []
-    precedence = {TrackStatus.GREEN: 1, TrackStatus.YELLOW: 2, TrackStatus.VSC: 3, TrackStatus.SAFETY_CAR: 4, TrackStatus.RED: 5}
     for item in records:
         if item.date is None:
             diagnostics.untimed_records += 1
@@ -206,30 +215,52 @@ def _status(records: tuple[RaceControlDTO, ...], cutoff: datetime, session_key: 
         if item.date > cutoff:
             diagnostics.future_records += 1
             continue
-        flag = (item.flag or "").upper()
-        message = (item.message or "").upper()
-        category = (item.category or "").upper()
-        scope = (item.scope or "").upper()
-        status = None
-        global_track = scope == "TRACK"
-        global_event = scope in {"", "TRACK"}
-        if (global_track and (flag == "RED" or message == "RED FLAG")) or (global_event and category == "SESSIONSTATUS" and message in {"SESSION ABORTED", "SESSION SUSPENDED"}):
-            status = TrackStatus.RED
-        elif global_event and (global_track or category == "SAFETYCAR") and message in {"VIRTUAL SAFETY CAR DEPLOYED", "VSC DEPLOYED"}:
-            status = TrackStatus.VSC
-        elif global_event and (global_track or category == "SAFETYCAR") and message == "SAFETY CAR DEPLOYED":
-            status = TrackStatus.SAFETY_CAR
-        elif global_track and (flag in {"YELLOW", "DOUBLE YELLOW"} or message in {"YELLOW FLAG", "DOUBLE YELLOW"}):
-            status = TrackStatus.YELLOW
-        elif (global_event and category == "SESSIONSTATUS" and message == "SESSION STARTED") or global_track and message in {"GREEN FLAG", "TRACK GREEN"}:
-            status = TrackStatus.GREEN
+        status = global_track_status(item)
         if status is not None:
-            states.append((item.date, precedence[status], status))
+            states.append((item.date, track_status_precedence(status), status))
     if not states:
         return None
     observed_at, _, status = max(states, key=lambda value: (value[0], value[1]))
     diagnostics.included_records["race_control"] = 1
     return TrackStatusState(status=status, observed_at=observed_at, provenance=(_source("race_control", observed_at, session_key, "race-control event reduced by explicit flag/message rules"),))
+
+
+def track_status_precedence(status: TrackStatus) -> int:
+    return {
+        TrackStatus.GREEN: 1,
+        TrackStatus.YELLOW: 2,
+        TrackStatus.VSC: 3,
+        TrackStatus.SAFETY_CAR: 4,
+        TrackStatus.RED: 5,
+    }[status]
+
+
+def global_track_status(item: RaceControlDTO) -> TrackStatus | None:
+    """Apply the accepted V2.1 global race-control interpretation to one event."""
+
+    flag = (item.flag or "").upper()
+    message = (item.message or "").upper()
+    category = (item.category or "").upper()
+    scope = (item.scope or "").upper()
+    global_track = scope == "TRACK"
+    global_event = scope in {"", "TRACK"}
+    if (global_track and (flag == "RED" or message == "RED FLAG")) or (
+        global_event and category == "SESSIONSTATUS" and message in {"SESSION ABORTED", "SESSION SUSPENDED"}
+    ):
+        return TrackStatus.RED
+    if global_event and (global_track or category == "SAFETYCAR") and message in {
+        "VIRTUAL SAFETY CAR DEPLOYED", "VSC DEPLOYED",
+    }:
+        return TrackStatus.VSC
+    if global_event and (global_track or category == "SAFETYCAR") and message == "SAFETY CAR DEPLOYED":
+        return TrackStatus.SAFETY_CAR
+    if global_track and (flag in {"YELLOW", "DOUBLE YELLOW"} or message in {"YELLOW FLAG", "DOUBLE YELLOW"}):
+        return TrackStatus.YELLOW
+    if (global_event and category == "SESSIONSTATUS" and message == "SESSION STARTED") or (
+        global_track and message in {"GREEN FLAG", "TRACK GREEN"}
+    ):
+        return TrackStatus.GREEN
+    return None
 
 
 def reconstruct(dataset: OpenF1Dataset, session_key: int, focal_driver_number: int, decision_lap: int, foreign_records: int = 0):

@@ -50,6 +50,8 @@ class LapAdmissionRejectionReason(StrEnum):
 
     MISSING_TIMING = "missing_timing"
     INVALID_DURATION = "invalid_duration"
+    INVALID_LAP_NUMBER = "invalid_lap_number"
+    CONFLICTING_TIMING_EVIDENCE = "conflicting_timing_evidence"
 
 
 class LapExclusionReason(StrEnum):
