@@ -157,6 +157,8 @@ class TyreDegradationEstimate(ModelEstimate):
 
     @model_validator(mode="after")
     def degradation_evidence_is_bounded(self):
+        if self.compound is TyreCompound.UNKNOWN:
+            raise ValueError("tyre-age slope requires an identified compound")
         if self.minimum_tyre_age_laps >= self.maximum_tyre_age_laps:
             raise ValueError("tyre-age slope requires a strictly positive age span")
         if self.evidence_window.ended_at > self.as_of:

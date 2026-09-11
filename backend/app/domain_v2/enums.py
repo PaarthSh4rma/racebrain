@@ -79,6 +79,16 @@ class PaceAvailabilityReason(StrEnum):
     INSUFFICIENT_RECENT_CLEAN_LAPS = "insufficient_recent_clean_laps"
 
 
+class TyreSlopeAvailabilityReason(StrEnum):
+    NO_OBSERVATIONS = "no_observations"
+    MISSING_TYRE_ANNOTATION = "missing_tyre_annotation"
+    UNKNOWN_COMPOUND = "unknown_compound"
+    MIXED_COMPOUND = "mixed_compound"
+    INCONSISTENT_TYRE_AGE_PROGRESSION = "inconsistent_tyre_age_progression"
+    INSUFFICIENT_CLEAN_LAPS = "insufficient_clean_laps"
+    INSUFFICIENT_TYRE_AGE_SPAN = "insufficient_tyre_age_span"
+
+
 class TriggerMetric(StrEnum):
     GAP_AHEAD_S = "gap_ahead_s"
     GAP_BEHIND_S = "gap_behind_s"

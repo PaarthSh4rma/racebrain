@@ -151,6 +151,29 @@ class PaceModelConfig(FrozenDomainModel):
         )
 
 
+class TyreSlopeModelConfig(FrozenDomainModel):
+    model_name: str = Field(min_length=1)
+    model_version: str = Field(min_length=1)
+    minimum_clean_laps: int = Field(default=5, ge=2)
+    minimum_tyre_age_span_laps: int = Field(default=4, ge=1)
+    excluded_quality_warnings: tuple[LapQualityWarning, ...] = (LapQualityWarning.WEATHER_TRANSITION,)
+
+    @field_validator("excluded_quality_warnings")
+    @classmethod
+    def warning_policy_is_unique_and_deterministic(cls, value):
+        if len(set(value)) != len(value):
+            raise ValueError("excluded quality warnings must be unique")
+        return tuple(reason for reason in LapQualityWarning if reason in value)
+
+    def version(self) -> ModelVersion:
+        payload = json.dumps(self.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
+        return ModelVersion(
+            model_name=self.model_name,
+            version=self.model_version,
+            config_hash=f"sha256:{sha256(payload.encode('utf-8')).hexdigest()}",
+        )
+
+
 class FitDiagnostics(FrozenDomainModel):
     competitor_id: CompetitorId
     as_of: datetime
