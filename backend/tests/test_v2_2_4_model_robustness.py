@@ -128,6 +128,26 @@ def test_known_odd_sample_has_documented_linear_interpolated_quantiles_and_media
     assert result.diagnostics.quantiles.p10 <= result.diagnostics.quantiles.p50 <= result.diagnostics.quantiles.p90
 
 
+def test_even_sample_p50_exactly_matches_accepted_median_despite_rounding_order():
+    lower, upper = 60.0251, 125.116058
+    midpoint = (lower + upper) / 2
+    assert midpoint != lower + (upper - lower) * 0.5
+    values = (55.0, lower, upper, 130.0)
+    source = context([
+        lap(lap_number=index + 10, lap_time_s=value)
+        for index, value in enumerate(values)
+    ])
+    point_fit = estimate_competitor_pace(source, A)
+    result = analyze_competitor_pace_robustness(source, A)
+
+    assert result.point_fit == point_fit
+    assert result.diagnostics.quantiles.sample_count == point_fit.estimate.sample_count == 4
+    assert result.diagnostics.quantiles.p50 == result.point_fit.estimate.value == midpoint
+    assert result.diagnostics.quantiles.p10 == values[0] + (values[1] - values[0]) * (3 * 0.1)
+    assert result.diagnostics.quantiles.p90 == values[2] + (values[3] - values[2]) * (3 * 0.9 - 2)
+    assert PaceRobustnessResult.model_validate(result.model_dump()) == result
+
+
 def test_pace_quantiles_use_only_exact_included_hard_and_warning_filtered_laps():
     observations = [lap(lap_number=index, lap_time_s=value) for index, value in enumerate((80, 81, 82, 83, 84), 10)]
     observations += [

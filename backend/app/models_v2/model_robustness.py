@@ -274,6 +274,9 @@ def _linear_interpolated_quantile(sorted_values: tuple[float, ...], quantile: fl
     if lower_index == upper_index:
         return float(sorted_values[lower_index])
     weight = position - lower_index
+    if weight == 0.5:
+        # Match the frozen point estimator's standard-library median arithmetic exactly.
+        return float((sorted_values[lower_index] + sorted_values[upper_index]) / 2)
     return float(sorted_values[lower_index] + (sorted_values[upper_index] - sorted_values[lower_index]) * weight)
 
 
