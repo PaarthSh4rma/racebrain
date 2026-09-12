@@ -1,6 +1,7 @@
 """Deterministic median baseline for recent representative clean-lap pace."""
 
 from collections import Counter
+from collections.abc import Sequence
 from statistics import median
 
 from app.domain_v2.enums import (
@@ -49,25 +50,7 @@ def estimate_competitor_pace(
 ) -> CompetitorPaceFit:
     if competitor_id not in {car.competitor_id for car in context.race_state.competitors}:
         raise ValueError("pace subject must exist in canonical RaceState")
-    observations = tuple(item for item in context.observations if item.competitor_id == competitor_id)
-    latest_lap = max((item.lap_number for item in observations), default=None)
-    if latest_lap is None:
-        candidates = ()
-    else:
-        first_candidate_lap = max(1, latest_lap - config.lookback_laps + 1)
-        candidates = tuple(item for item in observations if first_candidate_lap <= item.lap_number <= latest_lap)
-    configured_warnings = set(config.excluded_quality_warnings)
-    included = []
-    hard_counts = Counter()
-    warning_counts = Counter()
-    for item in candidates:
-        hard = tuple(item.hard_exclusions)
-        warnings = tuple(reason for reason in item.quality_warnings if reason in configured_warnings)
-        if hard or warnings:
-            hard_counts.update(hard)
-            warning_counts.update(warnings)
-        else:
-            included.append(item)
+    candidates, included, audit = select_pace_evidence(context, competitor_id, config)
     model_version = config.version()
     insufficient = len(included) < config.minimum_clean_laps
     residual_median = None
@@ -102,16 +85,6 @@ def estimate_competitor_pace(
             missing_fields=evidence_quality.missing_fields,
         ),
         provenance=(model_provenance,),
-    )
-    audit = PaceSelectionAudit(
-        hard_exclusions=tuple(
-            HardExclusionCount(reason=reason, lap_count=hard_counts[reason])
-            for reason in _ordered_hard_reasons(hard_counts)
-        ),
-        warning_exclusions=tuple(
-            WarningExclusionCount(warning=warning, lap_count=warning_counts[warning])
-            for warning in _ordered_warning_reasons(warning_counts)
-        ),
     )
     if insufficient:
         return CompetitorPaceFit(
@@ -152,6 +125,47 @@ def estimate_competitor_pace(
     )
 
 
+def select_pace_evidence(
+    context: PaceEstimationContext,
+    competitor_id: CompetitorId,
+    config: PaceModelConfig = BASELINE_PACE_CONFIG,
+) -> tuple[tuple[ModellingLapObservation, ...], tuple[ModellingLapObservation, ...], PaceSelectionAudit]:
+    """Return the exact candidate and included evidence used by the point estimator."""
+
+    if competitor_id not in {car.competitor_id for car in context.race_state.competitors}:
+        raise ValueError("pace subject must exist in canonical RaceState")
+    observations = tuple(item for item in context.observations if item.competitor_id == competitor_id)
+    latest_lap = max((item.lap_number for item in observations), default=None)
+    if latest_lap is None:
+        candidates = ()
+    else:
+        first_candidate_lap = max(1, latest_lap - config.lookback_laps + 1)
+        candidates = tuple(item for item in observations if first_candidate_lap <= item.lap_number <= latest_lap)
+    configured_warnings = set(config.excluded_quality_warnings)
+    included = []
+    hard_counts = Counter()
+    warning_counts = Counter()
+    for item in candidates:
+        hard = tuple(item.hard_exclusions)
+        warnings = tuple(reason for reason in item.quality_warnings if reason in configured_warnings)
+        if hard or warnings:
+            hard_counts.update(hard)
+            warning_counts.update(warnings)
+        else:
+            included.append(item)
+    audit = PaceSelectionAudit(
+        hard_exclusions=tuple(
+            HardExclusionCount(reason=reason, lap_count=hard_counts[reason])
+            for reason in _ordered_hard_reasons(hard_counts)
+        ),
+        warning_exclusions=tuple(
+            WarningExclusionCount(warning=warning, lap_count=warning_counts[warning])
+            for warning in _ordered_warning_reasons(warning_counts)
+        ),
+    )
+    return candidates, tuple(included), audit
+
+
 def estimate_field_pace(
     context: PaceEstimationContext,
     config: PaceModelConfig = BASELINE_PACE_CONFIG,
@@ -165,7 +179,7 @@ def estimate_field_pace(
 
 
 def _pace_evidence_quality(
-    observations: list[ModellingLapObservation],
+    observations: Sequence[ModellingLapObservation],
     config: PaceModelConfig,
 ) -> DataQuality:
     warnings = {

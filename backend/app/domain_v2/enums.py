@@ -89,6 +89,21 @@ class TyreSlopeAvailabilityReason(StrEnum):
     INSUFFICIENT_TYRE_AGE_SPAN = "insufficient_tyre_age_span"
 
 
+class PaceQuantileMethod(StrEnum):
+    LINEAR_INTERPOLATION = "linear_interpolation"
+
+
+class SlopeSign(StrEnum):
+    NEGATIVE = "negative"
+    ZERO = "zero"
+    POSITIVE = "positive"
+
+
+class RobustnessAvailabilityReason(StrEnum):
+    POINT_ESTIMATE_UNAVAILABLE = "point_estimate_unavailable"
+    INVALID_DIAGNOSTIC_REFIT = "invalid_diagnostic_refit"
+
+
 class TriggerMetric(StrEnum):
     GAP_AHEAD_S = "gap_ahead_s"
     GAP_BEHIND_S = "gap_behind_s"

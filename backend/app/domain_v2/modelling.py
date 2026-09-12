@@ -7,7 +7,7 @@ import json
 from pydantic import Field, field_validator, model_validator
 
 from .base import FrozenDomainModel
-from .enums import LapExclusionReason, LapQualityWarning, TrackStatus, TyreCompound
+from .enums import LapExclusionReason, LapQualityWarning, PaceQuantileMethod, TrackStatus, TyreCompound
 from .estimates import ModelVersion, _provenance_is_bounded
 from .identity import CompetitorId
 from .provenance import DataQuality, Provenance
@@ -164,6 +164,29 @@ class TyreSlopeModelConfig(FrozenDomainModel):
         if len(set(value)) != len(value):
             raise ValueError("excluded quality warnings must be unique")
         return tuple(reason for reason in LapQualityWarning if reason in value)
+
+    def version(self) -> ModelVersion:
+        payload = json.dumps(self.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
+        return ModelVersion(
+            model_name=self.model_name,
+            version=self.model_version,
+            config_hash=f"sha256:{sha256(payload.encode('utf-8')).hexdigest()}",
+        )
+
+
+class ModelRobustnessConfig(FrozenDomainModel):
+    model_name: str = Field(min_length=1)
+    model_version: str = Field(min_length=1)
+    pace_quantiles: tuple[float, float, float] = (0.1, 0.5, 0.9)
+    pace_quantile_method: PaceQuantileMethod = PaceQuantileMethod.LINEAR_INTERPOLATION
+    tyre_slope_zero_tolerance: float = Field(default=1e-9, ge=0.0)
+
+    @field_validator("pace_quantiles")
+    @classmethod
+    def quantiles_are_fixed_and_ordered(cls, value):
+        if value != (0.1, 0.5, 0.9):
+            raise ValueError("pace robustness requires fixed p10, p50, and p90 quantiles")
+        return value
 
     def version(self) -> ModelVersion:
         payload = json.dumps(self.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
