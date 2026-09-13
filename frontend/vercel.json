@@ -7,6 +7,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://racebrain-api.onrender.com/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/"
     }
   ]
 }
