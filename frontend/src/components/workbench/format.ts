@@ -25,3 +25,17 @@ export function formatUtcTime(value: string | null | undefined): string {
 export function formatNumber(value: number | null, suffix = ""): string {
   return value === null ? missing : `${value}${suffix}`;
 }
+
+export function formatPace(value: number | null | undefined): string {
+  return value === null || value === undefined ? missing : `${value.toFixed(3)} s/lap`;
+}
+
+export function formatSlope(value: number | null | undefined): string {
+  if (value === null || value === undefined) return missing;
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(3)} s/lap/lap`;
+}
+
+export function humanize(value: string | null | undefined): string {
+  return value ? value.replaceAll("_", " ") : missing;
+}
