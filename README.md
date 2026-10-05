@@ -1,6 +1,6 @@
 # RaceBrain
 
-RaceBrain is a React and FastAPI portfolio project for comparing simplified Formula 1 tyre strategies and replaying historical decisions without future-race hindsight. It combines deterministic race-time estimates, Monte Carlo ranking, grounded strategy explanations, and lap-bounded historical context from OpenF1.
+RaceBrain is a React and FastAPI portfolio project for reconstructing Formula 1 race state without future hindsight, modelling bounded historical evidence, and exploring generated strategy candidates under stochastic scenarios.
 
 The model is an educational strategy simulator, not a validated physics model or a live pit-wall system. OpenF1 views query available upstream session data; their freshness depends on OpenF1 and this application does not ingest car telemetry continuously.
 
@@ -12,11 +12,11 @@ React + TypeScript + Vite
         | HTTP (VITE_API_URL)
         v
 FastAPI
-  |-- track profiles and simulation engines
-  |-- deterministic and optional OpenRouter explanations
+  |-- track profiles and scenario simulation engines
+  |-- legacy explanation routes (not used by the public V2 UI)
   |-- cached OpenF1 boundary with controlled transient retries
-  |-- lap-bounded historical replay reconstruction
-  `-- deterministic replay recommendation and alternative scoring
+  |-- cutoff-safe canonical historical reconstruction
+  `-- deterministic V2 pace, tyre and robustness models
 ```
 
 Circuit metadata is owned by the backend and exposed through `GET /tracks`. The frontend loads those profiles and can override base lap time and pit loss per simulation request. Monte Carlo requests may include a seed for reproducible comparisons; ordinary requests remain unseeded.
@@ -29,41 +29,25 @@ Production uses a Vercel-hosted Vite frontend calling a Render-hosted FastAPI se
 - Backend: https://racebrain-api.onrender.com
 - API documentation: https://racebrain-api.onrender.com/docs
 
+### Production routes
+
+| Route | Product surface |
+|---|---|
+| [`/`](https://racebrain-mauve.vercel.app/) | RaceBrain product entrance |
+| [`/workbench`](https://racebrain-mauve.vercel.app/workbench) | Historical Model Workbench: cutoff-safe RaceState, pace, tyre-age slope and robustness |
+| [`/simulation`](https://racebrain-mauve.vercel.app/simulation) | Scenario Simulation Lab: experimental generated-candidate Monte Carlo comparison |
+
+The historical workbench and simulation lab are intentionally separate: one analyses bounded real historical evidence, while the other explores stochastic counterfactual scenarios. Legacy AI/LLM, Race Engineer and replay UI surfaces are not part of the current public V2 product and are not called during normal use.
+
 ## RaceBrain V2 Historical Model Workbench
 
 The production [Historical Model Workbench](https://racebrain-mauve.vercel.app/workbench) reconstructs a cutoff-safe, provider-independent `RaceState` at a selected race lap and runs the accepted V2.2 models over the same bounded full-field context. It presents representative clean-lap pace, empirical included-lap p10/p50/p90 spread, observed within-stint tyre-age pace slope and deterministic leave-one-out sign stability. Operators can inspect the exact included/excluded evidence, typed unavailable reasons, `DataQuality`, provenance, model versions and configuration hashes. These are descriptive historical estimates with explicit limitations—not normalized car performance, probabilistic confidence or strategy recommendations. The architecture and acceptance record are in [`docs/v2/v2.2.5-model-workbench.md`](docs/v2/v2.2.5-model-workbench.md).
 
-The original strategy simulator remains available at the root route: select a circuit, optionally adjust base lap time or pit loss, and run the model. Historical OpenF1 requests depend on upstream availability. The optional LLM mode is unavailable in this deployment because no OpenRouter key is configured.
+Historical OpenF1 requests depend on upstream availability. The simulation lab does not depend on OpenF1 or OpenRouter configuration.
 
-## Historical Decision Replay
+## Historical modelling and scenario exploration
 
-The replay flow guides a user through race search, session selection, driver selection, and a completed decision lap. It reconstructs only the information available at that moment, then presents a deterministic recommendation and three alternatives scored under the same sampled conditions.
-
-Hindsight prevention is enforced at the service boundary: laps and lap-numbered events after the selected lap are excluded, timestamped weather and race-control records are cut off at that lap's completion time, session-end metadata is removed, and stints are truncated rather than revealing later pit stops. Responses include record counts, ignored-future counts, cutoff provenance, cache metadata, and honest warnings for incomplete upstream data. The full implementation note is in [`docs/milestone-2-replay-implementation.md`](docs/milestone-2-replay-implementation.md).
-
-Automated replay tests use five deterministic, timestamped fixtures—dry, safety-car, changing-weather, incomplete-data, and multiple-stint races—so validation never depends on live OpenF1 availability. Recommendations remain educational outputs from a deliberately simplified model.
-
-The release-candidate captures below use genuine OpenF1 Monaco and United Kingdom race sessions. They were captured from the locally validated branch because the production backend intentionally remains on Milestone 1 until this pull request is reviewed.
-
-| Bounded Monaco replay | Changing-weather replay |
-| --- | --- |
-| ![Historical Decision Replay at Monaco lap 20](docs/screenshots/replay/desktop-replay-result.png) | ![Changing-weather replay at the United Kingdom Grand Prix](docs/screenshots/replay/changing-weather-replay.png) |
-
-<p align="center">
-  <img src="docs/screenshots/replay/mobile-390-replay.png" alt="Historical Decision Replay at a 390 pixel mobile viewport" width="390">
-</p>
-
-## Product tour
-
-| Strategy simulation and ranking | Race Engineer analysis |
-| --- | --- |
-| ![RaceBrain desktop simulation result](docs/screenshots/desktop-strategy-result.jpg) | ![RaceBrain Race Engineer result](docs/screenshots/race-engineer-result.jpg) |
-
-<p align="center">
-  <img src="docs/screenshots/mobile-overview.jpg" alt="RaceBrain mobile layout at 390 pixels wide" width="390">
-</p>
-
-The original product-tour images document the released Milestone 1 experience; the replay images document the Milestone 2 release candidate.
+The Historical Model Workbench reconstructs only information available at the selected completed lap, then presents canonical full-field race state, representative pace, empirical evidence spread, tyre-age pace slope, robustness, provenance and explicit limitations. The Scenario Simulation Lab keeps the useful legacy Monte Carlo engine but labels its outputs honestly: scenario preference means fastest among the generated candidates in sampled counterfactuals, not real-race win probability. See [`docs/v2/v2.2.6-product-surface.md`](docs/v2/v2.2.6-product-surface.md) for the public product boundary.
 
 ## Local setup
 
@@ -78,7 +62,7 @@ cp .env.example .env
 uvicorn app.main:app --reload
 ```
 
-The OpenRouter key is optional. Without it, the API starts normally and returns `503` only for LLM-backed explanation requests.
+The OpenRouter key is optional and applies only to deprecated legacy explanation endpoints; the public V2 product does not call them.
 
 Frontend (Node 24 recommended):
 
@@ -96,7 +80,7 @@ Defaults: API `http://127.0.0.1:8000`, frontend `http://localhost:5173`.
 | Location | Variable | Required | Purpose |
 | --- | --- | --- | --- |
 | Backend | `CORS_ALLOWED_ORIGINS` | Production | Comma-separated explicit frontend origins |
-| Backend | `OPENROUTER_API_KEY` | No | Enables OpenRouter-backed explanations |
+| Backend | `OPENROUTER_API_KEY` | No | Enables deprecated legacy explanation endpoints only |
 | Frontend | `VITE_API_URL` | Production | Public URL of the FastAPI service |
 
 Never put a secret in a `VITE_` variable; Vite embeds those values in browser assets.
@@ -148,9 +132,9 @@ Production environment-variable names are `CORS_ALLOWED_ORIGINS` and optional `O
 - Compares generated one-stop and two-stop strategies with a simplified tyre-degradation model.
 - Uses common sampled lap, pit, and safety-car conditions across strategies within each seeded race comparison.
 - Reconstructs a driver's historical state at a selected completed lap and excludes future laps, weather, race-control messages, and pit-stop knowledge.
-- Produces deterministic replay recommendations plus transparent alternative scores under shared sampled conditions; these scores are not win probabilities.
+- Compares generated simulation candidates under paired sampled conditions; scenario preference is not real-race win probability.
 - Caches repeated OpenF1 reads in bounded per-process memory with endpoint-specific expiry and retries only transient failures.
-- LLM explanations are constrained by supplied simulation data but still depend on an external model provider.
+- Legacy LLM routes remain for compatibility but are absent from normal public product navigation and network traffic.
 - The free Render service can spin down when idle, so the first API request after inactivity may take noticeably longer.
 - There is no authentication, database, persistent telemetry pipeline, live timing operation, or production monitoring yet.
 
@@ -159,11 +143,9 @@ Production environment-variable names are `CORS_ALLOWED_ORIGINS` and optional `O
 - `GET /health`
 - `GET /tracks` and `GET /tracks/{track_id}`
 - `POST /monte-carlo/generate`
-- `POST /race-engineer/briefing`
-- `POST /ai/explain`, `POST /ai/llm-explain`, and `POST /ai/scenario`
-- `GET /replay/sessions`, session drivers, and available decision laps
-- `POST /replay/snapshot`, `/replay/recommendation`, `/replay/alternatives`, and `/replay/assessment`
-- Legacy `/race-data` and `/live-strategy` routes remain for compatibility but are not used by the replay UI.
+- `GET /v2/historical/sessions`, session drivers, and available decision laps
+- `POST /v2/historical/race-state` and `/v2/historical/analysis`
+- Legacy AI, Race Engineer, replay, `/race-data`, and `/live-strategy` routes remain for compatibility but are not used by the public V2 UI.
 
 ## Disclaimer
 

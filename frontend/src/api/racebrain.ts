@@ -4,22 +4,35 @@ import type {
   TrackProfile,
 } from "../types/racebrain";
 import { API_URL, apiError } from "./config";
+import { parseSimulationResult, parseTrackProfile, parseTrackProfiles } from "./simulationValidation";
 
-export async function getTrackProfiles(): Promise<TrackProfile[]> {
-  const response = await fetch(`${API_URL}/tracks`);
-  if (!response.ok) throw await apiError(response, "Failed to load track profiles.");
-  const data = (await response.json()) as { tracks: TrackProfile[] };
-  return data.tracks;
+export const SCENARIO_SIMULATION_CONFIG = Object.freeze({
+  lapVariance: 0.35,
+  pitVariance: 1.5,
+  includeOneStop: true,
+  includeTwoStop: true,
+  maximumEvaluatedCandidates: 10,
+});
+
+async function json(response: Response, message: string): Promise<unknown> {
+  try { return await response.json(); }
+  catch { throw new Error(message); }
 }
 
-export async function getTrackProfile(trackId: string): Promise<TrackProfile> {
-  const response = await fetch(`${API_URL}/tracks/${trackId}`);
+export async function getTrackProfiles(signal?: AbortSignal): Promise<TrackProfile[]> {
+  const response = await fetch(`${API_URL}/tracks`, { signal });
+  if (!response.ok) throw await apiError(response, "Failed to load track profiles.");
+  return parseTrackProfiles(await json(response, "The server returned malformed track-profile data."));
+}
+
+export async function getTrackProfile(trackId: string, signal?: AbortSignal): Promise<TrackProfile> {
+  const response = await fetch(`${API_URL}/tracks/${trackId}`, { signal });
 
   if (!response.ok) {
     throw await apiError(response, "Failed to load track profile.");
   }
 
-  return response.json();
+  return parseTrackProfile(await json(response, "The server returned malformed track-profile data."));
 }
 
 export async function runMonteCarloSimulation(
@@ -37,10 +50,11 @@ export async function runMonteCarloSimulation(
       simulations: inputs.simulations,
       base_lap_time: inputs.base_lap_time,
       pit_loss: inputs.pit_loss,
-      lap_variance: 0.35,
-      pit_variance: 1.5,
-        include_one_stop: true,
-        include_two_stop: true,
+      lap_variance: SCENARIO_SIMULATION_CONFIG.lapVariance,
+      pit_variance: SCENARIO_SIMULATION_CONFIG.pitVariance,
+      seed: inputs.seed,
+      include_one_stop: SCENARIO_SIMULATION_CONFIG.includeOneStop,
+      include_two_stop: SCENARIO_SIMULATION_CONFIG.includeTwoStop,
     }),
   });
 
@@ -48,5 +62,5 @@ export async function runMonteCarloSimulation(
     throw await apiError(response, "Failed to run simulation.");
   }
 
-  return response.json();
+  return parseSimulationResult(await json(response, "The server returned malformed simulation data."));
 }

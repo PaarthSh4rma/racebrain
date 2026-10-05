@@ -6,9 +6,13 @@ export type Stint = {
 export type Strategy = {
   strategy_id: number;
   strategy: Stint[];
+  win_probability: number;
   win_percentage: number;
+  preference_probability: number;
   preference_percentage: number;
   average_total_time: number;
+  best_case: number;
+  worst_case: number;
   std_dev: number;
 };
 
@@ -17,16 +21,20 @@ export type SimulationInputs = {
   base_lap_time: number;
   pit_loss: number;
   simulations: number;
+  seed: number | null;
 };
 
 export type SimulationResult = {
   track: string;
+  track_id: string;
   base_lap_time: number;
   pit_loss: number;
   degradation_multiplier: number;
   total_generated: number;
   deterministic_candidates_evaluated: number;
   simulations_per_strategy: number;
+  // Legacy heuristic fields remain in the backend contract but are not
+  // presented as confidence or win probability in the public product.
   confidence: string;
   win_gap_to_second: number;
   recommendation: string;

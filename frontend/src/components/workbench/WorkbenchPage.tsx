@@ -8,6 +8,7 @@ import ModelDiagnostics from "./ModelDiagnostics";
 import ModelFieldTable from "./ModelFieldTable";
 import ModelSummary from "./ModelSummary";
 import QualityBadge from "./QualityBadge";
+import ProductHeader from "../product/ProductHeader";
 
 const currentYear = new Date().getUTCFullYear();
 const seasons = Array.from({ length: currentYear - 2017 }, (_, index) => currentYear - index);
@@ -112,7 +113,7 @@ export default function WorkbenchPage() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100" data-testid="historical-workbench">
-      <header className="border-b border-slate-700 bg-slate-900"><div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-4 py-3"><div><a href="/" className="text-xs font-bold uppercase tracking-[0.25em] text-cyan-400">RaceBrain</a><h1 className="text-lg font-semibold">Historical Model Workbench</h1></div><span className="text-right text-xs text-slate-500">RaceState + deterministic V2.2 analysis · UTC</span></div></header>
+      <ProductHeader current="workbench" title="Historical Model Workbench" meta="Canonical RaceState + deterministic V2.2 analysis · UTC" />
       <div className="mx-auto max-w-[1500px] space-y-4 p-3 sm:p-4">
         <section className="border border-slate-700 bg-slate-900 p-3" aria-label="Historical state controls">
           <div className="grid items-end gap-3 lg:grid-cols-[100px_minmax(220px,2fr)_110px_minmax(180px,1.4fr)_110px_auto]">
