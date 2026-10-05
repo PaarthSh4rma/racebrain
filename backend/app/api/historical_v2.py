@@ -5,10 +5,18 @@ import logging
 from fastapi import APIRouter, HTTPException, Path, Query
 
 from app.adapters.openf1_v2.mapper import ReconstructionFailure
+from app.application_v2.analyze_historical import analyze_historical_decision_point
 from app.application_v2.historical_discovery import HistoricalDiscoveryError, discover_decision_laps, discover_race_sessions, discover_session_drivers
 from app.application_v2.reconstruct_race_state import HistoricalRaceStateRequest, reconstruct_historical_race_state
 from app.data_sources.openf1_client import OpenF1Client, OpenF1Error
-from app.models.historical_v2 import DecisionLapSummary, HistoricalDriverSummary, HistoricalRaceStateApiRequest, HistoricalRaceStateResponse, HistoricalSessionSummary
+from app.models.historical_v2 import (
+    DecisionLapSummary,
+    HistoricalAnalysisResponse,
+    HistoricalDriverSummary,
+    HistoricalRaceStateApiRequest,
+    HistoricalRaceStateResponse,
+    HistoricalSessionSummary,
+)
 
 router = APIRouter(prefix="/v2/historical", tags=["V2 Historical Race State"])
 client = OpenF1Client()
@@ -19,6 +27,7 @@ SESSION_LOAD_FAILED = "Historical session data could not be loaded."
 DRIVER_LOAD_FAILED = "Historical driver data could not be loaded."
 LAP_LOAD_FAILED = "Historical decision-lap data could not be loaded."
 RECONSTRUCTION_FAILED = "Historical race state could not be reconstructed."
+ANALYSIS_FAILED = "Historical decision-point analysis failed safely."
 
 
 def _failure(exc: ReconstructionFailure) -> HTTPException:
@@ -102,3 +111,25 @@ def historical_race_state(request: HistoricalRaceStateApiRequest):
     except Exception as exc:
         logger.exception("historical reconstruction failed")
         raise HTTPException(status_code=500, detail=RECONSTRUCTION_FAILED) from exc
+
+
+@router.post("/analysis", response_model=HistoricalAnalysisResponse)
+def historical_analysis(request: HistoricalRaceStateApiRequest):
+    try:
+        result = analyze_historical_decision_point(
+            HistoricalRaceStateRequest(
+                openf1_session_key=request.session_key,
+                focal_driver_number=request.driver_number,
+                decision_lap=request.decision_lap,
+            ),
+            client,
+        )
+        return HistoricalAnalysisResponse.from_result(result)
+    except ReconstructionFailure as exc:
+        raise _failure(exc) from exc
+    except OpenF1Error as exc:
+        logger.warning("historical data provider unavailable during model analysis", exc_info=True)
+        raise HTTPException(status_code=502, detail=PROVIDER_UNAVAILABLE) from exc
+    except Exception as exc:
+        logger.exception("historical decision-point analysis failed")
+        raise HTTPException(status_code=500, detail=ANALYSIS_FAILED) from exc
