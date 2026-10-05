@@ -29,7 +29,11 @@ Production uses a Vercel-hosted Vite frontend calling a Render-hosted FastAPI se
 - Backend: https://racebrain-api.onrender.com
 - API documentation: https://racebrain-api.onrender.com/docs
 
-To try the deployed Milestone 1 demo, open the frontend, select a circuit, optionally adjust base lap time or pit loss, and run the strategy model. The Milestone 2 historical replay is implemented and validated locally but is not deployed yet. Historical OpenF1 requests depend on upstream availability. The optional LLM mode is unavailable in this deployment because no OpenRouter key is configured.
+## RaceBrain V2 Historical Model Workbench
+
+The production [Historical Model Workbench](https://racebrain-mauve.vercel.app/workbench) reconstructs a cutoff-safe, provider-independent `RaceState` at a selected race lap and runs the accepted V2.2 models over the same bounded full-field context. It presents representative clean-lap pace, empirical included-lap p10/p50/p90 spread, observed within-stint tyre-age pace slope and deterministic leave-one-out sign stability. Operators can inspect the exact included/excluded evidence, typed unavailable reasons, `DataQuality`, provenance, model versions and configuration hashes. These are descriptive historical estimates with explicit limitations—not normalized car performance, probabilistic confidence or strategy recommendations. The architecture and acceptance record are in [`docs/v2/v2.2.5-model-workbench.md`](docs/v2/v2.2.5-model-workbench.md).
+
+The original strategy simulator remains available at the root route: select a circuit, optionally adjust base lap time or pit loss, and run the model. Historical OpenF1 requests depend on upstream availability. The optional LLM mode is unavailable in this deployment because no OpenRouter key is configured.
 
 ## Historical Decision Replay
 
