@@ -1,70 +1,214 @@
 # RaceBrain
 
-RaceBrain is a React and FastAPI portfolio project for reconstructing Formula 1 race state without future hindsight, modelling bounded historical evidence, and exploring generated strategy candidates under stochastic scenarios.
+**Formula 1 race-strategy decision support built around cutoff-safe historical reconstruction, empirical pace and tyre modelling, robustness analysis, and stochastic scenario exploration.**
 
-The model is an educational strategy simulator, not a validated physics model or a live pit-wall system. OpenF1 views query available upstream session data; their freshness depends on OpenF1 and this application does not ingest car telemetry continuously.
+RaceBrain reconstructs what was knowable at a historical decision point, models representative clean-lap pace and within-stint tyre-age behaviour, exposes the evidence and limitations behind every estimate, and keeps stochastic strategy exploration separate from the deterministic historical model.
+
+[**Live App**](https://racebrain-mauve.vercel.app) · [**Historical Workbench**](https://racebrain-mauve.vercel.app/workbench) · [**Simulation Lab**](https://racebrain-mauve.vercel.app/simulation) · [**Backend Health**](https://racebrain-api.onrender.com/health) · [**API Docs**](https://racebrain-api.onrender.com/docs)
+
+The primary V2 product is the **Historical Model Workbench**. It rebuilds a canonical full-field race state at a strict observation cutoff and runs auditable pace, tyre-age, and robustness models over that bounded evidence. The separate **Scenario Simulation Lab** explores generated strategies with Monte Carlo perturbations; it is experimental and does not claim to predict a real race winner.
+
+## What RaceBrain does
+
+Race strategy is a state-estimation and decision problem before it is an optimization problem. RaceBrain focuses first on making the state and model evidence defensible.
+
+| Surface | Purpose | Semantics |
+| --- | --- | --- |
+| [Product entrance](https://racebrain-mauve.vercel.app) | Explains the current system and routes operators to the supported tools | Current capability status, without unbuilt-feature claims |
+| [Historical Model Workbench](https://racebrain-mauve.vercel.app/workbench) | Reconstructs a historical decision point and evaluates full-field pace and tyre evidence | Deterministic, cutoff-safe, provider-independent, evidence-first |
+| [Scenario Simulation Lab](https://racebrain-mauve.vercel.app/simulation) | Compares generated one-stop and two-stop candidates under sampled race-time conditions | Stochastic, exploratory, reproducible with an optional seed |
+
+## Historical Model Workbench
+
+The workbench reconstructs a canonical `RaceState` for every competitor using only observations available at the selected completed lap. It then builds a bounded modelling context and exposes:
+
+- full-field position, gap, tyre, weather, race-control, and data-quality state;
+- representative clean-lap pace from a recent lap-number window;
+- empirical p10/p50/p90 spread across the accepted pace evidence;
+- within-stint tyre-age pace slope for the latest defensible stint;
+- deterministic leave-one-observation-out slope ranges and sign stability;
+- every accepted and excluded observation with typed exclusion reasons;
+- provenance, model versions, configuration hashes, and typed unavailable states.
+
+[![Historical Model Workbench showing the Monaco 2024 Leclerc lap-20 decision point](docs/assets/historical-model-workbench.jpg)](docs/assets/historical-model-workbench.jpg)
+
+*Production Historical Model Workbench: Monaco 2024, Charles Leclerc, lap 20. Representative pace is available from eight accepted laps; the tyre slope correctly remains unavailable because the latest admitted lap lacks complete tyre evidence.*
+
+An unavailable result is part of the contract, not a UI failure. RaceBrain does not substitute an earlier stint, unrelated driver, stale estimate, or fabricated fallback when the required evidence is absent.
+
+## Scenario Simulation Lab
+
+The simulation lab preserves the useful stochastic branch of the original project while separating it from historical V2 modelling. It:
+
+- generates one-stop and two-stop candidate strategies;
+- deterministically pre-ranks the generated candidates;
+- compares a bounded candidate set under paired Monte Carlo conditions;
+- perturbs lap time, pit loss, degradation, and safety-car scenarios;
+- reports scenario preference, average simulated race time, and spread;
+- exposes the generated count, evaluated count, runs per strategy, assumptions, and seed.
+
+[![Scenario Simulation Lab showing a seeded Monaco candidate comparison](docs/assets/scenario-simulation-lab.jpg)](docs/assets/scenario-simulation-lab.jpg)
+
+*Production Scenario Simulation Lab: seeded Monaco comparison across ten deterministically pre-ranked candidates.*
+
+**Scenario preference means “fastest most often among these candidates under the sampled conditions.” It is not real-race win probability.** The legacy heuristic confidence label is not presented as statistical or model confidence.
 
 ## Architecture
 
-```text
-React + TypeScript + Vite
-        |
-        | HTTP (VITE_API_URL)
-        v
-FastAPI
-  |-- track profiles and scenario simulation engines
-  |-- legacy explanation routes (not used by the public V2 UI)
-  |-- cached OpenF1 boundary with controlled transient retries
-  |-- cutoff-safe canonical historical reconstruction
-  `-- deterministic V2 pace, tyre and robustness models
+The provider boundary, canonical domain, and models are deliberately separated. Historical and stochastic workflows share a product shell but do not share semantics.
+
+```mermaid
+flowchart TD
+    subgraph HIST["Deterministic historical modelling"]
+        A[OpenF1 historical data] --> B[Provider adapter and normalization]
+        B --> C[Canonical RaceState at cutoff T]
+        C --> D[Bounded PaceEstimationContext]
+        D --> E[Representative pace and empirical spread]
+        D --> F[Tyre-age pace slope]
+        E --> G[Robustness and evidence layer]
+        F --> G
+        G --> H[Historical Model Workbench]
+    end
+
+    subgraph SIM["Stochastic scenario exploration"]
+        I[Track profiles and scenario inputs] --> J[Candidate strategy generator]
+        J --> K[Deterministic pre-ranking]
+        K --> L[Monte Carlo simulation]
+        L --> M[Scenario Simulation Lab]
+    end
 ```
 
-Circuit metadata is owned by the backend and exposed through `GET /tracks`. The frontend loads those profiles and can override base lap time and pit loss per simulation request. Monte Carlo requests may include a seed for reproducible comparisons; ordinary requests remain unseeded.
+The planned V2 direction is:
 
-Production uses a Vercel-hosted Vite frontend calling a Render-hosted FastAPI service over HTTPS. Neither deployment includes a database or persistent application storage.
+```text
+Canonical RaceState
+        ↓
+Pace & Tyre
+        ↓
+Competitors & Traffic       ← next
+        ↓
+Strategy & Scenario
+        ↓
+Decision Engine
+```
 
-## Live deployment
+Stages below Pace & Tyre are roadmap direction, not completed capability.
 
-- Frontend: https://racebrain-mauve.vercel.app
-- Backend: https://racebrain-api.onrender.com
-- API documentation: https://racebrain-api.onrender.com/docs
+## Engineering principles
 
-### Production routes
+| Principle | Contract |
+| --- | --- |
+| **No hindsight** | No observation after decision timestamp `T` may influence historical state, evidence, estimates, diagnostics, or provenance. |
+| **Canonical domain model** | OpenF1 DTOs are normalized at the adapter boundary into strict provider-independent RaceBrain identities and domain types. |
+| **Explicit data quality** | Missing, conflicting, approximate, or degraded evidence is represented in `DataQuality`; it is not silently filled. |
+| **Precise model semantics** | Empirical spread is not confidence. Sign stability is not probability. Tyre-age slope is an observed association, not automatically physical tyre degradation. |
+| **Reproducibility** | Model names, versions, typed configuration, configuration hashes, evidence windows, and optional simulation seeds are exposed. |
+| **Fail closed** | A model that lacks sufficient defensible evidence returns a typed unavailable result rather than borrowing older or unrelated evidence. |
 
-| Route | Product surface |
-|---|---|
-| [`/`](https://racebrain-mauve.vercel.app/) | RaceBrain product entrance |
-| [`/workbench`](https://racebrain-mauve.vercel.app/workbench) | Historical Model Workbench: cutoff-safe RaceState, pace, tyre-age slope and robustness |
-| [`/simulation`](https://racebrain-mauve.vercel.app/simulation) | Scenario Simulation Lab: experimental generated-candidate Monte Carlo comparison |
+Legacy AI/LLM endpoints remain in the repository for compatibility and project history, but they are not part of the current public V2 product. The intended future boundary is **deterministic decision engine → structured recommendation → optional natural-language explanation**. An LLM is not the strategy engine.
 
-The historical workbench and simulation lab are intentionally separate: one analyses bounded real historical evidence, while the other explores stochastic counterfactual scenarios. Legacy AI/LLM, Race Engineer and replay UI surfaces are not part of the current public V2 product and are not called during normal use.
+## Historical modelling pipeline
 
-## RaceBrain V2 Historical Model Workbench
+### 1. Reconstruct bounded race state
 
-The production [Historical Model Workbench](https://racebrain-mauve.vercel.app/workbench) reconstructs a cutoff-safe, provider-independent `RaceState` at a selected race lap and runs the accepted V2.2 models over the same bounded full-field context. It presents representative clean-lap pace, empirical included-lap p10/p50/p90 spread, observed within-stint tyre-age pace slope and deterministic leave-one-out sign stability. Operators can inspect the exact included/excluded evidence, typed unavailable reasons, `DataQuality`, provenance, model versions and configuration hashes. These are descriptive historical estimates with explicit limitations—not normalized car performance, probabilistic confidence or strategy recommendations. The architecture and acceptance record are in [`docs/v2/v2.2.5-model-workbench.md`](docs/v2/v2.2.5-model-workbench.md).
+RaceBrain derives an explicit observation cutoff from the selected completed lap. Future laps, weather samples, race-control events, positions, intervals, pits, and source provenance are excluded. Untimestamped or conflicting evidence is handled conservatively rather than made historically knowable after the fact.
 
-Historical OpenF1 requests depend on upstream availability. The simulation lab does not depend on OpenF1 or OpenRouter configuration.
+### 2. Build canonical modelling history
 
-## Historical modelling and scenario exploration
+Completed timed laps are admitted into a full-field `PaceEstimationContext`. Malformed rows, foreign-session data, exact duplicates, conflicting timing evidence, and observations beyond the cutoff are separated and diagnosed. Factual safety-car, VSC, red-flag, global-yellow, lap-one, pit-out, and pit-lane exclusions remain attached to the evidence.
 
-The Historical Model Workbench reconstructs only information available at the selected completed lap, then presents canonical full-field race state, representative pace, empirical evidence spread, tyre-age pace slope, robustness, provenance and explicit limitations. The Scenario Simulation Lab keeps the useful legacy Monte Carlo engine but labels its outputs honestly: scenario preference means fastest among the generated candidates in sampled counterfactuals, not real-race win probability. See [`docs/v2/v2.2.6-product-surface.md`](docs/v2/v2.2.6-product-surface.md) for the public product boundary.
+### 3. Estimate representative pace
 
-## Local setup
+- Uses a recent bounded lap-number window; missing laps do not stretch the window backward.
+- Applies factual hard exclusions and configured warning exclusions.
+- Returns the median of accepted representative laps.
+- Reports empirical p10/p50/p90 included-lap spread and evidence counts.
+- Returns insufficient evidence instead of manufacturing a pace estimate.
 
-Backend (Python 3.11+):
+### 4. Estimate tyre-age pace slope
+
+- Uses exactly the latest canonical bounded stint.
+- Requires one identified compound, at least five clean observations, and sufficient tyre-age span.
+- Fits closed-form ordinary least squares of lap time against canonical tyre age.
+- Does not pool stints or fall back to an earlier stint.
+- Preserves negative, zero, and positive empirical slopes.
+- Reports leave-one-out ranges, maximum deviation, influential evidence, and sign stability.
+
+These are **descriptive historical estimates**. They are not fuel-corrected intrinsic car performance, causal physical tyre degradation, or probabilistic forecasts. Fuel burn, track evolution, traffic, weather, energy deployment, tyre-set condition, and driver management remain potential confounders.
+
+## Validation
+
+RaceBrain combines adversarial automated tests with live historical evidence audits. The important outcome is not that every model returns a value; it is that results remain bounded, reproducible, and honest when evidence is incomplete or confounded.
+
+| Historical case | Accepted evidence |
+| --- | --- |
+| **Monaco 2024 · Leclerc · lap 20** | Representative pace `79.709 s/lap` from eight accepted laps; tyre slope unavailable because canonical tyre evidence is incomplete. |
+| **Spain 2024 · Norris · lap 20** | Representative pace `80.862 s/lap`; tyre-age slope `-0.009560843 s/lap/lap`, with all 17 leave-one-out refits retaining a negative sign. |
+| **Britain 2024 · Norris** | Demonstrates both an available, sign-stable positive slope at lap 25 and an unavailable latest-stint result at lap 45. |
+| **São Paulo 2024 · Verstappen · lap 40** | Red-flag/restart-affected evidence produces an extreme descriptive negative slope, demonstrating why confounding is surfaced instead of relabelled as causal degradation. |
+
+The validation record and exact evidence are documented in [V2.2.5 Model Workbench](docs/v2/v2.2.5-model-workbench.md). The route and public-product acceptance boundary are documented in [V2.2.6 Product Surface Rehabilitation](docs/v2/v2.2.6-product-surface.md).
+
+At the V2.2.6 release gate, the repository passed the full backend suite, frontend lint/build, production dependency audit, the full Playwright suite, desktop/mobile visual acceptance, live workbench analysis, and a seeded production Monte Carlo run. GitHub Actions repeats backend, frontend, and browser checks for pushes and pull requests.
+
+## Current capabilities
+
+| Capability | Status |
+| --- | --- |
+| Canonical historical `RaceState` | Operational |
+| Representative clean-lap pace | Operational |
+| Empirical included-lap pace spread | Operational |
+| Latest-stint tyre-age pace slope | Operational |
+| Leave-one-out robustness | Operational |
+| Evidence, `DataQuality`, and provenance inspection | Operational |
+| Reproducible scenario simulation | Experimental |
+| Competitors and traffic model | Next |
+| V2 strategy and decision engine | Planned |
+
+## Roadmap
+
+| Version | Milestone | State |
+| --- | --- | --- |
+| V2.0 | Product Reset | ✅ Complete |
+| V2.1 | Canonical Race State | ✅ Complete |
+| V2.1.5 | Historical Workbench | ✅ Complete |
+| V2.2 | Pace & Tyre Modelling | ✅ Complete |
+| V2.2.5 | Model Workbench | ✅ Complete |
+| V2.2.6 | Product Surface Rehabilitation | ✅ Complete |
+| **V2.3** | **Competitors & Traffic** | **Next** |
+| V2.4 | Strategy & Decision Engine | Planned |
+| V2.5 | Complete Operator Workbench | Planned |
+| V2.6 | Historical Validation | Planned |
+| V2.7 | Operational Hardening | Planned |
+
+North star: **Given the state of the race at T, compare available actions, expected consequences, uncertainty/sensitivity, and the observable conditions that would change the call.**
+
+## Tech stack
+
+| Layer | Technology |
+| --- | --- |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS |
+| Browser validation | Playwright |
+| Backend | Python 3.11+, FastAPI, Pydantic |
+| Historical modelling | Deterministic Python statistics, quantiles, closed-form OLS, leave-one-out robustness |
+| Scenario modelling | Candidate generation, deterministic pre-ranking, Monte Carlo race-time simulation |
+| Data | OpenF1 historical APIs through a cached adapter boundary |
+| Infrastructure | Vercel, Render, GitHub Actions |
+
+## Local development
+
+Backend:
 
 ```bash
 cd backend
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 cp .env.example .env
 uvicorn app.main:app --reload
 ```
 
-The OpenRouter key is optional and applies only to deprecated legacy explanation endpoints; the public V2 product does not call them.
-
-Frontend (Node 24 recommended):
+Frontend, in a second terminal (Node 24 recommended):
 
 ```bash
 cd frontend
@@ -73,19 +217,17 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Defaults: API `http://127.0.0.1:8000`, frontend `http://localhost:5173`.
+The local defaults are API `http://127.0.0.1:8000` and frontend `http://localhost:5173`.
 
-## Environment variables
-
-| Location | Variable | Required | Purpose |
-| --- | --- | --- | --- |
-| Backend | `CORS_ALLOWED_ORIGINS` | Production | Comma-separated explicit frontend origins |
-| Backend | `OPENROUTER_API_KEY` | No | Enables deprecated legacy explanation endpoints only |
-| Frontend | `VITE_API_URL` | Production | Public URL of the FastAPI service |
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `CORS_ALLOWED_ORIGINS` | Deployment | Explicit browser origins accepted by the FastAPI service |
+| `VITE_API_URL` | Optional locally | Explicit frontend API base URL; Vercel can otherwise use the same-origin `/api` rewrite |
+| `OPENROUTER_API_KEY` | No | Legacy explanation endpoints only; not required by the public V2 product |
 
 Never put a secret in a `VITE_` variable; Vite embeds those values in browser assets.
 
-## Validation
+Useful checks:
 
 ```bash
 cd backend
@@ -93,60 +235,30 @@ pytest
 python -c "from app.main import app; print(app.title)"
 
 cd ../frontend
-npm ci
 npm run lint
 npm run build
 npm run test:browser
 ```
 
-GitHub Actions runs the same backend and frontend checks on pushes and pull requests.
-
-Responsive release verification covers Chrome viewports at 390 × 844, 430 × 932, 768 × 1024, and 1440 × 900. The focused Playwright regression checks the 390px layout for document overflow, core controls, and primary-card containment.
-
 ## Deployment
 
-### Render backend
+- **Frontend:** [Vercel](https://racebrain-mauve.vercel.app), with the project root at `frontend` and SPA rewrites defined in `frontend/vercel.json`.
+- **Backend:** Render API origin `https://racebrain-api.onrender.com`, configured by `render.yaml`, with [`/health`](https://racebrain-api.onrender.com/health) as the service health check.
+- **API reference:** [FastAPI documentation](https://racebrain-api.onrender.com/docs).
+- **CI:** GitHub Actions validates backend, frontend, and browser paths before merge.
 
-The backend is deployed from `render.yaml` on Render's free web-service plan. Set `CORS_ALLOWED_ORIGINS` to the exact Vercel origin and optionally set `OPENROUTER_API_KEY`. The configured health check is `/health`.
+Render's free service can sleep while idle, so the first request after inactivity may take longer. Production secrets and origins belong in hosting configuration, never source control.
 
-Production URL: https://racebrain-api.onrender.com
+## Limitations
 
-For an isolated pull-request deployment, create a free Render **Service Preview**
-for the backend and set Vercel's branch-specific Preview variable
-`VITE_API_URL` to that preview's exact `https://…onrender.com` URL. Set the
-preview backend's `CORS_ALLOWED_ORIGINS` to the exact Vercel branch-preview
-origin. Do not use a wildcard, reuse an ephemeral URL in source control, or
-change either production environment.
-
-### Vercel frontend
-
-Import the repository, set the project root to `frontend`, and set `VITE_API_URL` to the Render backend URL. `frontend/vercel.json` declares the Vite build and output directory.
-
-Production URL: https://racebrain-mauve.vercel.app
-
-Production environment-variable names are `CORS_ALLOWED_ORIGINS` and optional `OPENROUTER_API_KEY` on Render, plus `VITE_API_URL` on Vercel. Values should be configured in the hosting dashboards and never committed.
-
-## Current capabilities and limitations
-
-- Preserves 24 built-in circuit profiles and rejects unsupported identifiers.
-- Compares generated one-stop and two-stop strategies with a simplified tyre-degradation model.
-- Uses common sampled lap, pit, and safety-car conditions across strategies within each seeded race comparison.
-- Reconstructs a driver's historical state at a selected completed lap and excludes future laps, weather, race-control messages, and pit-stop knowledge.
-- Compares generated simulation candidates under paired sampled conditions; scenario preference is not real-race win probability.
-- Caches repeated OpenF1 reads in bounded per-process memory with endpoint-specific expiry and retries only transient failures.
-- Legacy LLM routes remain for compatibility but are absent from normal public product navigation and network traffic.
-- The free Render service can spin down when idle, so the first API request after inactivity may take noticeably longer.
-- There is no authentication, database, persistent telemetry pipeline, live timing operation, or production monitoring yet.
-
-## Main endpoints
-
-- `GET /health`
-- `GET /tracks` and `GET /tracks/{track_id}`
-- `POST /monte-carlo/generate`
-- `GET /v2/historical/sessions`, session drivers, and available decision laps
-- `POST /v2/historical/race-state` and `/v2/historical/analysis`
-- Legacy AI, Race Engineer, replay, `/race-data`, and `/live-strategy` routes remain for compatibility but are not used by the public V2 UI.
+- Historical reconstruction depends on OpenF1 availability, coverage, timing, and provider semantics.
+- RaceBrain has no live telemetry pipeline, team telemetry, fuel mass, tyre-set condition, or continuously ingested timing feed.
+- V2.3 competitor/traffic effects, dirty-air modelling, and defensible gap-dynamics semantics are not implemented yet.
+- The V2 strategy/decision engine, pit-window logic, rejoin model, and trigger framework are not implemented yet.
+- Historical estimates are descriptive and may retain fuel, track-evolution, traffic, weather, race-control, and driver-management confounding.
+- The simulation lab is a simplified exploratory model, not the V2 historical decision engine or a real-race win model.
+- The current deployment has no authentication, database, persistent telemetry store, or production monitoring pipeline.
 
 ## Disclaimer
 
-RaceBrain is not affiliated with Formula 1, the FIA, or any Formula 1 team.
+RaceBrain is an independent engineering project and is not affiliated with Formula 1, the FIA, or any Formula 1 team. It is not a validated physics model, safety-critical system, or replacement for a professional pit wall.
